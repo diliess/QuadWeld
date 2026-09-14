@@ -88,6 +88,30 @@ def create_scene(config: SceneConfig, robot_usd_override: str | None = None):
     robot_mount.AddTranslateOp().Set(Gf.Vec3d(*config.robot_base_position_world))
     robot_usd = _resolve_robot_usd(config, robot_usd_override)
     stage_utils.add_reference_to_stage(usd_path=robot_usd, path=config.robot_prim_path)
+    # The official UR5e asset has no tool0 prim. Its disabled gripper joint
+    # provides the flange frame relative to wrist_3_link.
+    flange_path = f"{config.robot_prim_path}/wrist_3_link/{config.end_effector_frame}"
+    mount_joint = UsdPhysics.Joint(stage.GetPrimAtPath(f"{config.robot_prim_path}/joints/robot_gripper_joint"))
+    if not mount_joint or not mount_joint.GetBody0Rel().GetTargets():
+        raise RuntimeError("UR5e flange mount joint is missing; configure the replacement robot's tool frame")
+    if not mount_joint.GetBody1Rel().GetTargets():
+        # Empty body1 otherwise creates an unintended joint from the wrist to world.
+        mount_joint.CreateJointEnabledAttr(False)
+    if not stage.GetPrimAtPath(flange_path):
+        flange = UsdGeom.Xform.Define(stage, flange_path)
+        flange.AddTranslateOp().Set(Gf.Vec3d(mount_joint.GetLocalPos0Attr().Get()))
+        flange.AddOrientOp().Set(Gf.Quatf(mount_joint.GetLocalRot0Attr().Get()))
+    tool = UsdGeom.Cylinder.Define(stage, f"{flange_path}/Torch")
+    tool.CreateRadiusAttr(0.008)
+    tool.CreateHeightAttr(config.tool_length_m)
+    tool.CreateAxisAttr("Z")
+    tool.AddTranslateOp().Set(Gf.Vec3d(0, 0, config.tool_length_m / 2))
+    tool.CreateDisplayColorAttr([(0.8, 0.4, 0.1)])
+    tcp = UsdGeom.Xform.Define(stage, f"{flange_path}/TCP")
+    tcp.AddTranslateOp().Set(Gf.Vec3d(0, 0, config.tool_length_m))
+    tip = UsdGeom.Sphere.Define(stage, f"{flange_path}/TCP/Tip")
+    tip.CreateRadiusAttr(0.004)
+    tip.CreateDisplayColorAttr([(1.0, 0.2, 0.0)])
 
     UsdGeom.Xform.Define(stage, "/World/Workpiece")
     plate_x, plate_y, plate_z = config.plate_center_world

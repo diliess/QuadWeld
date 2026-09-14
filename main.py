@@ -1,18 +1,32 @@
-"""Standalone Isaac Sim 6 stage-one scene. No vision or robot motion."""
+"""Isaac Sim 6: image-derived contour, Cartesian path and one complete robot pass."""
 
 import argparse
 import importlib.metadata
+import json
 from pathlib import Path
 
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Build the QuadWeld Isaac Sim 6 scene")
-    parser.add_argument("--headless", action="store_true", help="Render once and exit without the GUI")
+    parser.add_argument("--headless", action="store_true", help="Complete the task and exit without the GUI")
+    mode = parser.add_mutually_exclusive_group()
+    mode.add_argument("--scene-only", action="store_true", help="Only create the scene and capture RGB")
+    mode.add_argument("--plan-only", action="store_true", help="Detect and preflight the path without executing it")
+    parser.add_argument("--gpu", type=int, default=0, help="Single RTX GPU index")
+    parser.add_argument("--webrtc", action="store_true", help="Stream the live task to a WebRTC client")
+    parser.add_argument("--public-ip", help="Server IP reachable by the WebRTC client")
+    parser.add_argument("--signal-port", type=int, default=49100, help="WebRTC TCP signaling port")
+    parser.add_argument("--stream-port", type=int, default=47998, help="WebRTC UDP media port")
+    parser.add_argument("--auto-start", action="store_true", help="Skip the WebRTC Start task gate")
+    parser.add_argument("--exit-on-complete", action="store_true", help="Close the application after task completion")
     parser.add_argument("--robot-usd", help="Local UR5e USD; defaults to the Isaac Sim assets root")
     parser.add_argument(
         "--output-dir", type=Path, default=Path(__file__).resolve().parent / "outputs", help="Saved USD and RGB preview directory"
     )
-    return parser.parse_args()
+    args = parser.parse_args()
+    if not all(1 <= port <= 65535 for port in (args.signal_port, args.stream_port)):
+        parser.error("Streaming ports must be between 1 and 65535")
+    return args
 
 
 def main() -> None:
@@ -26,8 +40,29 @@ def main() -> None:
 
     from isaacsim import SimulationApp
 
-    simulation_app = SimulationApp({"headless": args.headless, "renderer": "RaytracedLighting"})
+    launch_config = {"headless": args.headless or args.webrtc, "renderer": "RaytracedLighting",
+                     "active_gpu": args.gpu, "multi_gpu": False}
+    if args.webrtc:
+        launch_config["hide_ui"] = False
+        prefix = "--/exts/omni.kit.livestream.app/primaryStream/"
+        launch_config["extra_args"] = [
+            prefix + f"signalPort={args.signal_port}", prefix + f"streamPort={args.stream_port}",
+            prefix + "enableEventTracing=false",
+            "--/exts/omni.services.livestream.session/quitOnSessionEnded=false",
+        ]
+        if args.public_ip:
+            launch_config["extra_args"].append(prefix + f"publicIp={args.public_ip}")
+    simulation_app = SimulationApp(launch_config)
     try:
+        if args.webrtc:
+            import omni.kit.app
+
+            # Enable streaming on the same Python experience used by the controller.
+            # The full editor experience has a separate startup/layout lifecycle.
+            extensions = omni.kit.app.get_app().get_extension_manager()
+            extensions.set_extension_enabled_immediate("omni.kit.livestream.app", True)
+            if not extensions.is_extension_enabled("omni.kit.livestream.app"):
+                raise RuntimeError("Could not enable Isaac Sim WebRTC streaming")
         # Kit-dependent modules must be imported after SimulationApp starts.
         from isaacsim.core.experimental.utils import app as app_utils
         from isaacsim.core.experimental.utils import stage as stage_utils
@@ -41,23 +76,57 @@ def main() -> None:
 
         stage_utils.create_new_stage()
         camera, robot_usd = create_scene(SCENE, args.robot_usd)
-        if not args.headless:
+        if not args.headless or args.webrtc:
             ViewportManager.set_camera_view(
                 ViewportManager.get_camera(), eye=[1.5, -1.45, 1.55], target=[0.3, 0.0, 0.45]
             )
 
-        SimulationManager.setup_simulation(dt=1.0 / 60.0, device="cpu")
+        SimulationManager.setup_simulation(dt=SCENE.physics_dt, device="cpu")
         args.output_dir.mkdir(parents=True, exist_ok=True)
+        # Invalidate a previous run's success before any new planning or execution.
+        (args.output_dir / "execution_report.json").write_text(json.dumps(
+            {"completed": False, "status": "scene_only" if args.scene_only else "not_executed"}, indent=2) + "\n")
         stage_path = args.output_dir / "quadweld_scene.usda"
         if not stage_utils.get_current_stage().GetRootLayer().Export(str(stage_path)):
             raise RuntimeError(f"Could not export scene to {stage_path}")
 
         sensor = create_rgb_sensor(camera, SCENE)
         robot = Articulation(SCENE.robot_prim_path)
+        if not args.scene_only:
+            import numpy as np
+            from PIL import Image
+            from robot.kinematics import SerialKinematics
+            from robot.robot_controller import RobotController, plan_joint_path
+            from vision.geometry import PlaneCamera
+            from vision.contour_detector import detect_contour, save_overlay
+            from planning.waypoint_generator import generate_waypoints
+            from scene.debug import draw_plan, draw_polyline
+
+            stage = stage_utils.get_current_stage()
+            model = SerialKinematics.from_stage(stage, SCENE)
+            calibration = PlaneCamera.from_stage(stage, SCENE)
+            model.save(args.output_dir / "robot_kinematics.npz")
+        panel = None
+        if args.webrtc:
+            from scene.streaming import StreamingPanel
+
+            panel = StreamingPanel()
+            print(f"WebRTC: TCP {args.signal_port}, UDP {args.stream_port}; "
+                  f"server={args.public_ip or 'server network IP'}", flush=True)
+            if args.auto_start:
+                panel.start()
+            else:
+                panel.wait_for_start(simulation_app)
+            panel.set_status("Initializing robot and capturing RGB...")
         app_utils.play(commit=True)
         app_utils.update_app(steps=10)
         if robot.num_dofs != 6:
             raise RuntimeError(f"Expected a six-DOF UR5e articulation, found {robot.num_dofs} DOFs")
+        if not args.scene_only:
+            controller = RobotController(robot, model, simulation_app, SCENE, args.output_dir)
+            if panel:
+                controller.progress_callback = panel.set_status
+            controller.initialize_home()
         preview_path = args.output_dir / "overhead_rgb.png"
         save_rgb_frame(sensor, simulation_app, preview_path)
         print(f"Robot USD: {robot_usd}")
@@ -65,7 +134,45 @@ def main() -> None:
         print(f"Scene saved: {stage_path}")
         print(f"RGB image saved: {preview_path}")
 
-        if not args.headless:
+        if not args.scene_only:
+            if panel:
+                panel.set_status("Detecting contour and checking trajectory...")
+            image_rgb = np.asarray(Image.open(preview_path).convert("RGB"))
+            contour_pixel, mask = detect_contour(image_rgb, threshold=SCENE.dark_threshold,
+                                                  min_area=SCENE.min_contour_area_px)
+            Image.fromarray(mask).save(args.output_dir / "contour_mask.png")
+            save_overlay(image_rgb, contour_pixel, args.output_dir / "contour_overlay.png")
+            contour_world = calibration.pixel_to_world(contour_pixel)
+            # Known plate extent is used only for rejecting invalid detections, never to construct the path.
+            if np.any(np.abs(contour_world[:, :2] - np.array(SCENE.plate_center_world[:2]))
+                      > np.array(SCENE.plate_size[:2]) / 2):
+                raise RuntimeError("Detected contour projects outside the steel plate")
+            path = generate_waypoints(contour_world, SCENE, calibration.plane_normal)
+            joints, poses, phases = plan_joint_path(model, path, controller.current_q(), SCENE,
+                                                    update_callback=simulation_app.update if args.webrtc else None)
+            np.savez(args.output_dir / "trajectory.npz", contour_pixel=contour_pixel,
+                     contour_world=contour_world, surface_points=path.surface_points,
+                     poses_world=poses, joint_positions=joints, phases=phases,
+                     world_from_base=model.world_from_base,
+                     world_from_camera=calibration.world_from_camera)
+            np.savetxt(args.output_dir / "waypoints_world.csv", path.poses[:, :3, 3], delimiter=",",
+                       header="tcp_x_m,tcp_y_m,tcp_z_m", comments="")
+            draw_plan(stage, path)
+            if not stage.GetRootLayer().Export(str(stage_path)):
+                raise RuntimeError(f"Could not export planned scene to {stage_path}")
+            print(f"Preflight passed: {len(path.surface_points)} contour samples; {len(joints) - 1} motion targets", flush=True)
+            if not args.plan_only:
+                controller.follow_cartesian_path(joints, poses, phases)
+                draw_polyline(stage, "TCPActual", [row[2:5] for row in controller.history], (1.0, 0.4, 0.0))
+                if not stage.GetRootLayer().Export(str(args.output_dir / "quadweld_result.usda")):
+                    raise RuntimeError("Could not export result scene")
+                print("Contour pass complete; TCP lifted to approach height.", flush=True)
+
+        if panel:
+            panel.set_status("Task complete. Close the application to exit." if not args.plan_only and not args.scene_only
+                             else "Preview complete. Close the application to exit.")
+
+        if (not args.headless or args.webrtc) and not args.exit_on_complete:
             while simulation_app.is_running():
                 simulation_app.update()
         app_utils.stop(commit=True)
