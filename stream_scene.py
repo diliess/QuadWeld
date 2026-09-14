@@ -17,7 +17,7 @@ for prim_path in (
     "/World/RobotMount/Robot",
     "/World/RobotStand",
     "/World/Workpiece/SteelPlate",
-    "/World/Sensors/OverheadRGB",
+    "/World/RobotMount/Sensors/BodyRGBD",
 ):
     if not stage.GetPrimAtPath(prim_path).IsValid():
         raise RuntimeError(f"QuadWeld scene is missing {prim_path}: {scene_path}")

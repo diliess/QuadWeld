@@ -10,7 +10,7 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Build the QuadWeld Isaac Sim 6 scene")
     parser.add_argument("--headless", action="store_true", help="Complete the task and exit without the GUI")
     mode = parser.add_mutually_exclusive_group()
-    mode.add_argument("--scene-only", action="store_true", help="Only create the scene and capture RGB")
+    mode.add_argument("--scene-only", action="store_true", help="Only create the scene and capture RGB-D")
     mode.add_argument("--plan-only", action="store_true", help="Detect and preflight the path without executing it")
     parser.add_argument("--gpu", type=int, default=0, help="Single RTX GPU index")
     parser.add_argument("--webrtc", action="store_true", help="Stream the live task to a WebRTC client")
@@ -20,6 +20,9 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--auto-start", action="store_true", help="Skip the WebRTC Start task gate")
     parser.add_argument("--exit-on-complete", action="store_true", help="Close the application after task completion")
     parser.add_argument("--robot-usd", help="Local UR5e USD; defaults to the Isaac Sim assets root")
+    parser.add_argument("--calibration", type=Path,
+                        default=Path(__file__).resolve().parent / "calibration/body_rgbd.json",
+                        help="RGB-D intrinsics and camera-to-base calibration, independent of workpiece pose")
     parser.add_argument(
         "--output-dir", type=Path, default=Path(__file__).resolve().parent / "outputs", help="Saved USD and RGB preview directory"
     )
@@ -53,6 +56,7 @@ def main() -> None:
         if args.public_ip:
             launch_config["extra_args"].append(prefix + f"publicIp={args.public_ip}")
     simulation_app = SimulationApp(launch_config)
+    failed = False
     try:
         if args.webrtc:
             import omni.kit.app
@@ -71,11 +75,13 @@ def main() -> None:
         from isaacsim.core.simulation_manager import SimulationManager
 
         from config import SCENE
-        from scene.camera import create_rgb_sensor, save_rgb_frame
+        from scene.camera import create_rgbd_sensor, save_rgbd_frame
         from scene.create_scene import create_scene
+        from vision.rgbd import RGBDCalibration, RGBDSettings, generate_rgbd_trajectory, save_rgbd_trajectory
 
+        calibration = RGBDCalibration.load(args.calibration)
         stage_utils.create_new_stage()
-        camera, robot_usd = create_scene(SCENE, args.robot_usd)
+        camera, robot_usd = create_scene(SCENE, args.robot_usd, camera_calibration=calibration)
         if not args.headless or args.webrtc:
             ViewportManager.set_camera_view(
                 ViewportManager.get_camera(), eye=[1.5, -1.45, 1.55], target=[0.3, 0.0, 0.45]
@@ -83,6 +89,7 @@ def main() -> None:
 
         SimulationManager.setup_simulation(dt=SCENE.physics_dt, device="cpu")
         args.output_dir.mkdir(parents=True, exist_ok=True)
+        (args.output_dir / "rgbd_calibration.json").write_text(args.calibration.read_text())
         # Invalidate a previous run's success before any new planning or execution.
         (args.output_dir / "execution_report.json").write_text(json.dumps(
             {"completed": False, "status": "scene_only" if args.scene_only else "not_executed"}, indent=2) + "\n")
@@ -90,21 +97,18 @@ def main() -> None:
         if not stage_utils.get_current_stage().GetRootLayer().Export(str(stage_path)):
             raise RuntimeError(f"Could not export scene to {stage_path}")
 
-        sensor = create_rgb_sensor(camera, SCENE)
+        sensor = create_rgbd_sensor(camera, SCENE)
         robot = Articulation(SCENE.robot_prim_path)
         if not args.scene_only:
             import numpy as np
-            from PIL import Image
             from robot.kinematics import SerialKinematics
             from robot.robot_controller import RobotController, plan_joint_path
-            from vision.geometry import PlaneCamera
-            from vision.contour_detector import detect_contour, save_overlay
-            from planning.waypoint_generator import generate_waypoints
             from scene.debug import draw_plan, draw_polyline
 
             stage = stage_utils.get_current_stage()
             model = SerialKinematics.from_stage(stage, SCENE)
-            calibration = PlaneCamera.from_stage(stage, SCENE)
+            world_from_base = model.world_from_base.copy()  # Simulator display/readback adapter only.
+            model.world_from_base = np.eye(4)
             model.save(args.output_dir / "robot_kinematics.npz")
         panel = None
         if args.webrtc:
@@ -117,18 +121,19 @@ def main() -> None:
                 panel.start()
             else:
                 panel.wait_for_start(simulation_app)
-            panel.set_status("Initializing robot and capturing RGB...")
+            panel.set_status("Initializing robot and capturing RGB-D...")
         app_utils.play(commit=True)
         app_utils.update_app(steps=10)
         if robot.num_dofs != 6:
             raise RuntimeError(f"Expected a six-DOF UR5e articulation, found {robot.num_dofs} DOFs")
         if not args.scene_only:
-            controller = RobotController(robot, model, simulation_app, SCENE, args.output_dir)
+            controller = RobotController(robot, model, simulation_app, SCENE, args.output_dir,
+                                         world_from_base=world_from_base)
             if panel:
                 controller.progress_callback = panel.set_status
             controller.initialize_home()
-        preview_path = args.output_dir / "overhead_rgb.png"
-        save_rgb_frame(sensor, simulation_app, preview_path)
+        preview_path = args.output_dir / "body_rgb.png"
+        image_rgb, depth_m = save_rgbd_frame(sensor, simulation_app, args.output_dir)
         print(f"Robot USD: {robot_usd}")
         print(f"Robot DOFs: {robot.num_dofs}")
         print(f"Scene saved: {stage_path}")
@@ -137,33 +142,29 @@ def main() -> None:
         if not args.scene_only:
             if panel:
                 panel.set_status("Detecting contour and checking trajectory...")
-            image_rgb = np.asarray(Image.open(preview_path).convert("RGB"))
-            contour_pixel, mask = detect_contour(image_rgb, threshold=SCENE.dark_threshold,
-                                                  min_area=SCENE.min_contour_area_px)
-            Image.fromarray(mask).save(args.output_dir / "contour_mask.png")
-            save_overlay(image_rgb, contour_pixel, args.output_dir / "contour_overlay.png")
-            contour_world = calibration.pixel_to_world(contour_pixel)
-            # Known plate extent is used only for rejecting invalid detections, never to construct the path.
-            if np.any(np.abs(contour_world[:, :2] - np.array(SCENE.plate_center_world[:2]))
-                      > np.array(SCENE.plate_size[:2]) / 2):
-                raise RuntimeError("Detected contour projects outside the steel plate")
-            path = generate_waypoints(contour_world, SCENE, calibration.plane_normal)
+            settings = RGBDSettings(waypoint_spacing_m=SCENE.waypoint_spacing_m, tcp_offset_m=SCENE.tcp_offset_m,
+                                    approach_height_m=SCENE.approach_height_m, dark_threshold=SCENE.dark_threshold,
+                                    min_contour_area_px=SCENE.min_contour_area_px)
+            result = generate_rgbd_trajectory(image_rgb, depth_m, calibration, settings)
+            save_rgbd_trajectory(result, image_rgb, args.output_dir)
+            path = result.path
+            controller.observed_surface = result.surface
             joints, poses, phases = plan_joint_path(model, path, controller.current_q(), SCENE,
-                                                    update_callback=simulation_app.update if args.webrtc else None)
-            np.savez(args.output_dir / "trajectory.npz", contour_pixel=contour_pixel,
-                     contour_world=contour_world, surface_points=path.surface_points,
-                     poses_world=poses, joint_positions=joints, phases=phases,
-                     world_from_base=model.world_from_base,
-                     world_from_camera=calibration.world_from_camera)
-            np.savetxt(args.output_dir / "waypoints_world.csv", path.poses[:, :3, 3], delimiter=",",
-                       header="tcp_x_m,tcp_y_m,tcp_z_m", comments="")
-            draw_plan(stage, path)
+                                                    update_callback=simulation_app.update if args.webrtc else None,
+                                                    surface=result.surface)
+            np.savez(args.output_dir / "trajectory.npz", contour_pixel=result.contour_pixel,
+                     contour_base=result.contour_base, surface_points=path.surface_points,
+                     poses_base=poses, joint_positions=joints, phases=phases,
+                     surface_normal_base=result.surface.normal, surface_point_base=result.surface.point,
+                     coordinate_frame="robot_base", base_from_camera=calibration.base_from_camera)
+            draw_plan(stage, path, world_from_base)
             if not stage.GetRootLayer().Export(str(stage_path)):
                 raise RuntimeError(f"Could not export planned scene to {stage_path}")
             print(f"Preflight passed: {len(path.surface_points)} contour samples; {len(joints) - 1} motion targets", flush=True)
             if not args.plan_only:
                 controller.follow_cartesian_path(joints, poses, phases)
-                draw_polyline(stage, "TCPActual", [row[2:5] for row in controller.history], (1.0, 0.4, 0.0))
+                actual_world = np.array([row[2:5] for row in controller.history]) @ world_from_base[:3, :3].T + world_from_base[:3, 3]
+                draw_polyline(stage, "TCPActual", actual_world, (1.0, 0.4, 0.0))
                 if not stage.GetRootLayer().Export(str(args.output_dir / "quadweld_result.usda")):
                     raise RuntimeError("Could not export result scene")
                 print("Contour pass complete; TCP lifted to approach height.", flush=True)
@@ -176,8 +177,14 @@ def main() -> None:
             while simulation_app.is_running():
                 simulation_app.update()
         app_utils.stop(commit=True)
+    except Exception:
+        # Kit fast shutdown may terminate before Python renders an uncaught exception.
+        import traceback
+        failed = True
+        traceback.print_exc()
+        raise
     finally:
-        simulation_app.close()
+        simulation_app.close(exit_code=int(failed))
 
 
 if __name__ == "__main__":

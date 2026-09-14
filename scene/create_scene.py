@@ -1,4 +1,4 @@
-"""Create the fixed robot, workpiece, rectangle, light, and RGB camera."""
+"""Create the fixed robot, workpiece, rectangle, light, and body RGB-D camera."""
 
 from pathlib import Path
 
@@ -7,7 +7,7 @@ from isaacsim.storage.native import get_assets_root_path
 from pxr import Gf, Sdf, UsdGeom, UsdLux, UsdPhysics, UsdShade
 
 from config import SceneConfig
-from scene.camera import create_overhead_camera
+from scene.camera import create_body_camera
 
 
 def _material(stage, path: str, color: tuple[float, float, float]) -> UsdShade.Material:
@@ -54,7 +54,7 @@ def _resolve_robot_usd(config: SceneConfig, robot_usd_override: str | None) -> s
     return assets_root.rstrip("/") + config.robot_usd_relative_path
 
 
-def create_scene(config: SceneConfig, robot_usd_override: str | None = None):
+def create_scene(config: SceneConfig, robot_usd_override: str | None = None, *, camera_calibration):
     stage = stage_utils.get_current_stage()
     UsdGeom.SetStageUpAxis(stage, UsdGeom.Tokens.z)
     UsdGeom.SetStageMetersPerUnit(stage, 1.0)
@@ -151,6 +151,6 @@ def create_scene(config: SceneConfig, robot_usd_override: str | None = None):
             collision=False,
         )
 
-    UsdGeom.Xform.Define(stage, "/World/Sensors")
-    camera = create_overhead_camera(config)
+    UsdGeom.Xform.Define(stage, f"{config.robot_mount_prim_path}/Sensors")
+    camera = create_body_camera(config, camera_calibration)
     return camera, robot_usd

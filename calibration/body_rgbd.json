@@ -1,0 +1,9 @@
+{
+  "description": "Nominal simulated body-mounted RGB-D calibration, optical camera axes to robot base. Replace with measured calibration on hardware; contains no workpiece pose.",
+  "image_size": [640, 480],
+  "camera_matrix": [[400.0, 0.0, 320.0], [0.0, 400.0, 240.0], [0.0, 0.0, 1.0]],
+  "distortion_coefficients": [0.0, 0.0, 0.0, 0.0, 0.0],
+  "depth_scale_to_m": 1.0,
+  "depth_convention": "optical_z",
+  "base_from_camera": [[1.0, 0.0, 0.0, 0.0], [0.0, -0.7035445979201053, 0.7106511090102073, 0.12], [0.0, -0.7106511090102073, -0.7035445979201053, 0.55], [0.0, 0.0, 0.0, 1.0]]
+}

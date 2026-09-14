@@ -29,8 +29,9 @@ def resample_closed_polygon(points, spacing):
     return np.vstack((sampled, sampled[0]))
 
 
-def generate_waypoints(contour_world_points, config, plane_normal=(0, 0, 1)):
-    surface = resample_closed_polygon(contour_world_points, config.waypoint_spacing_m)
+def generate_waypoints(contour_points, config, plane_normal=(0, 0, 1)):
+    """Generate poses in the same coordinate frame as the contour and normal."""
+    surface = resample_closed_polygon(contour_points, config.waypoint_spacing_m)
     normal = np.asarray(plane_normal, dtype=float)
     normal /= np.linalg.norm(normal)
     z_axis = -normal  # Tool +Z points towards the plate.

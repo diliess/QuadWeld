@@ -18,7 +18,7 @@ def distance_to_polyline(points, polyline):
     return np.linalg.norm(differences - fractions[:, :, None] * edges, axis=2).min(axis=1)
 
 
-def plan_joint_path(model, path, initial_q, config, update_callback=None):
+def plan_joint_path(model, path, initial_q, config, update_callback=None, surface=None):
     initial_pose = model.forward(initial_q)
     approach = path.poses[0]
     count = max(2, int(np.ceil(np.linalg.norm(initial_pose[:3, 3] - approach[:3, 3]) / config.waypoint_spacing_m)),
@@ -32,8 +32,8 @@ def plan_joint_path(model, path, initial_q, config, update_callback=None):
                           orientation_tolerance=config.ik_orientation_tolerance_rad)
         if np.max(np.abs(q - joints[-1])) > config.max_joint_step_rad:
             raise RuntimeError(f"IK branch jump near waypoint {i}; change home pose or robot placement")
-        # Check the complete tool and arm centreline against the plate slab and floor.
-        # This is a conservative workspace check, not a general mesh/self-collision planner.
+        # Check only the depth-observed surface; no configured plate/floor coordinates.
+        # Unobserved obstacles and self-collision need a separate scene planner.
         for alpha in (0.0, 0.5, 1.0):
             sample_q = joints[-1] + alpha * (q - joints[-1])
             tcp, links = model.forward(sample_q, links=True)
@@ -41,10 +41,8 @@ def plan_joint_path(model, path, initial_q, config, update_callback=None):
             for j, (a, b) in enumerate(zip(points, points[1:])):
                 segment = np.linspace(a, b, max(2, int(np.ceil(np.linalg.norm(b - a) / 0.01)) + 1))
                 radius = 0.006 if j == len(points) - 2 else 0.035
-                center, size = np.array(config.plate_center_world), np.array(config.plate_size)
-                inside = np.all(np.abs(segment - center) <= size / 2 + radius, axis=1)
-                if inside.any() or np.min(segment[:, 2]) < radius:
-                    raise RuntimeError(f"Predicted arm/tool intersection with plate or floor at waypoint {i}")
+                if surface is not None and surface.intersects(segment, radius):
+                    raise RuntimeError(f"Predicted arm/tool intersection with the observed surface at waypoint {i}")
         joints.append(q)
         if update_callback is not None:
             update_callback()
@@ -52,13 +50,16 @@ def plan_joint_path(model, path, initial_q, config, update_callback=None):
 
 
 class RobotController:
-    def __init__(self, articulation, model, simulation_app, config, output_dir):
+    def __init__(self, articulation, model, simulation_app, config, output_dir, world_from_base=None):
         from isaacsim.core.experimental.prims import XformPrim
         from isaacsim.core.simulation_manager import SimulationManager
 
         self.robot, self.model, self.app, self.config = articulation, model, simulation_app, config
         self.manager = SimulationManager
         self.output_dir = output_dir
+        # Simulation readback adapter only: the planner and model operate in robot base.
+        self.base_from_world = np.linalg.inv(world_from_base) if world_from_base is not None else np.eye(4)
+        self.observed_surface = None
         self.indices = [articulation.dof_names.index(name) for name in model.names]
         self.last_link = XformPrim(model.last_link_path)
         self.history = []
@@ -77,7 +78,7 @@ class RobotController:
         pose[:3, 3] = position.numpy()[0]
         w, x, y, z = quaternion.numpy()[0]
         pose[:3, :3] = Rotation.from_quat([x, y, z, w]).as_matrix()
-        return pose @ self.model.last_link_from_tcp
+        return self.base_from_world @ pose @ self.model.last_link_from_tcp
 
     def tick(self):
         if not self.app.is_running():
@@ -165,7 +166,8 @@ class RobotController:
                              "reference_y", "reference_z", "position_error_m", "orientation_error_rad"])
             writer.writerows(self.history)
         errors = np.array([row[-2:] for row in self.history])
-        report = {"completed": success, "status": "completed" if success else "failed", "samples": len(self.history)}
+        report = {"completed": success, "status": "completed" if success else "failed", "samples": len(self.history),
+                  "coordinate_frame": "robot_base"}
         if len(errors):
             report.update(max_position_error_m=float(errors[:, 0].max()),
                           rms_position_error_m=float(np.sqrt(np.mean(errors[:, 0] ** 2))),
@@ -173,9 +175,10 @@ class RobotController:
         trace = np.array([row[2:5] for row in self.history if row[1] == "trace"])
         if len(trace) and self.trace_reference is not None:
             distances = distance_to_polyline(trace, self.trace_reference)
-            clearance = trace[:, 2] - self.config.plate_top_z_world
             report.update(trace_max_path_error_m=float(distances.max()),
-                          trace_rms_path_error_m=float(np.sqrt(np.mean(distances ** 2))),
-                          trace_min_clearance_m=float(clearance.min()),
-                          trace_max_clearance_m=float(clearance.max()))
+                          trace_rms_path_error_m=float(np.sqrt(np.mean(distances ** 2))))
+            if self.observed_surface is not None:
+                clearance = (trace - self.observed_surface.point) @ self.observed_surface.normal
+                report.update(trace_min_clearance_m=float(clearance.min()),
+                              trace_max_clearance_m=float(clearance.max()), clearance_reference="RGB-D estimated surface")
         (self.output_dir / "execution_report.json").write_text(json.dumps(report, indent=2) + "\n")

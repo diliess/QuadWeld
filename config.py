@@ -50,11 +50,9 @@ class SceneConfig:
     outline_thickness: float = 0.0004
     outline_clearance: float = 0.0001
 
-    camera_prim_path: str = "/World/Sensors/OverheadRGB"
-    camera_position_world: tuple[float, float, float] = (0.45, 0.0, 1.75)
+    camera_prim_path: str = "/World/RobotMount/Sensors/BodyRGBD"
     camera_resolution: tuple[int, int] = (640, 480)  # Width, height in pixels.
     camera_focal_length_m: float = 0.024
-    camera_horizontal_aperture_m: float = 0.020955
     camera_near_m: float = 0.05
     camera_far_m: float = 10.0
 
