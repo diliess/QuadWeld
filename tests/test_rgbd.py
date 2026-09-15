@@ -7,6 +7,7 @@ import cv2
 import numpy as np
 from scipy.spatial.transform import Rotation
 
+from vision.contour_detector import detect_path
 from vision.rgbd import RGBDCalibration, generate_rgbd_trajectory
 
 
@@ -83,6 +84,36 @@ class RGBDTrajectoryTests(unittest.TestCase):
         self.assertFalse(result.surface.intersects(np.array([[0., 0, .98]]), .006))
         self.assertTrue(result.surface.intersects(np.array([[0., 0, 1.01]]), .006))
         self.assertFalse(result.surface.intersects(np.array([[2., 0, 1.01]]), .006))
+
+    def test_open_stroke_traces_endpoint_to_endpoint_without_closing(self):
+        image = np.full_like(self.rgb, 220)
+        cv2.polylines(image, [np.array([(60, 50), (60, 170), (240, 170), (240, 50)])],
+                      False, (10, 10, 10), 5)
+        result = generate_rgbd_trajectory(image, self.depth(), self.calibration)
+        self.assertFalse(result.closed)
+        self.assertEqual(result.diagnostics["path_type"], "open")
+        np.testing.assert_allclose(result.contour_pixel[[0, -1]], [[60, 50], [240, 50]], atol=2)
+        np.testing.assert_allclose(result.path.surface_points[[0, -1]], result.contour_base[[0, -1]])
+        self.assertGreater(np.linalg.norm(result.path.surface_points[0] - result.path.surface_points[-1]), .5)
+        self.assertLessEqual(np.linalg.norm(np.diff(result.path.surface_points, axis=0), axis=1).max(), .010001)
+        normal = result.surface.normal
+        np.testing.assert_allclose(result.path.poses[-1, :3, 3],
+                                   result.path.surface_points[-1] + .1 * normal)
+        trace = result.path.poses[np.array(result.path.phases) == "trace", :3, 3]
+        np.testing.assert_allclose(trace[-1], result.path.surface_points[-1] + .01 * normal)
+
+    def test_branching_open_stroke_is_rejected(self):
+        image = np.full_like(self.rgb, 220)
+        cv2.line(image, (60, 80), (240, 80), (10, 10, 10), 5)
+        cv2.line(image, (150, 80), (150, 180), (10, 10, 10), 5)
+        with self.assertRaisesRegex(RuntimeError, "No unbranched open"):
+            detect_path(image, mode="open")
+
+    def test_closed_path_still_returns_to_its_start(self):
+        result = generate_rgbd_trajectory(self.rgb, self.depth(), self.calibration)
+        self.assertTrue(result.closed)
+        self.assertEqual(result.diagnostics["path_type"], "closed")
+        np.testing.assert_allclose(result.path.surface_points[0], result.path.surface_points[-1])
 
 
 if __name__ == "__main__":

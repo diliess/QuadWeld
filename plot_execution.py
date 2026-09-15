@@ -22,12 +22,15 @@ def main():
         normal = trajectory["surface_normal_base"] if "surface_normal_base" in trajectory else np.array([0., 0., 1.])
         point = trajectory["surface_point_base"] if "surface_point_base" in trajectory else surface[0]
         frame = str(trajectory["coordinate_frame"]) if "coordinate_frame" in trajectory else "world"
+        closed = bool(trajectory["path_closed"]) if "path_closed" in trajectory else True
     trace = records[records["phase"] == "trace"]
     fig, axes = plt.subplots(1, 2, figsize=(11, 4.6), constrained_layout=True)
-    axes[0].plot(surface[:, 0], surface[:, 1], color="tab:blue", label="Image-derived contour", linewidth=2)
+    axes[0].plot(surface[:, 0], surface[:, 1], color="tab:blue", label="Image-derived path", linewidth=2)
     axes[0].plot(trace["actual_x"], trace["actual_y"], color="tab:orange", linestyle="--", label="Measured TCP")
-    axes[0].scatter(*surface[0, :2], color="red", label="Start / closure", zorder=4)
-    axes[0].set(xlabel=f"{frame} X (m)", ylabel=f"{frame} Y (m)", title="Contour pass: XY projection", aspect="equal")
+    axes[0].scatter(*surface[0, :2], color="red", label="Start" if not closed else "Start / closure", zorder=4)
+    if not closed:
+        axes[0].scatter(*surface[-1, :2], color="green", label="End", zorder=4)
+    axes[0].set(xlabel=f"{frame} X (m)", ylabel=f"{frame} Y (m)", title="Path pass: XY projection", aspect="equal")
     axes[0].legend(fontsize=8)
     elapsed = records["time_s"] - records["time_s"][0]
     positions = np.column_stack([records[f"actual_{axis}"] for axis in "xyz"])

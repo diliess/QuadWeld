@@ -54,7 +54,8 @@ def _resolve_robot_usd(config: SceneConfig, robot_usd_override: str | None) -> s
     return assets_root.rstrip("/") + config.robot_usd_relative_path
 
 
-def create_scene(config: SceneConfig, robot_usd_override: str | None = None, *, camera_calibration):
+def create_scene(config: SceneConfig, robot_usd_override: str | None = None, *, camera_calibration,
+                 open_outline: bool = False):
     stage = stage_utils.get_current_stage()
     UsdGeom.SetStageUpAxis(stage, UsdGeom.Tokens.z)
     UsdGeom.SetStageMetersPerUnit(stage, 1.0)
@@ -142,6 +143,8 @@ def create_scene(config: SceneConfig, robot_usd_override: str | None = None, *, 
         ("Right", (plate_x + rectangle_length / 2.0, plate_y, line_z), (line_width, rectangle_width - line_width, config.outline_thickness)),
     )
     for side, center_world, size in outline_specs:
+        if open_outline and side == "Top":
+            continue  # The three remaining sides form the sample endpoint-to-endpoint U path.
         _cuboid(
             stage,
             f"/World/Workpiece/Rectangle/{side}",

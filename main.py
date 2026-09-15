@@ -12,6 +12,9 @@ def parse_args() -> argparse.Namespace:
     mode = parser.add_mutually_exclusive_group()
     mode.add_argument("--scene-only", action="store_true", help="Only create the scene and capture RGB-D")
     mode.add_argument("--plan-only", action="store_true", help="Detect and preflight the path without executing it")
+    parser.add_argument("--path-mode", choices=("auto", "closed", "open"), default="auto",
+                        help="Detect a closed loop or endpoint-to-endpoint open stroke")
+    parser.add_argument("--demo-open", action="store_true", help="Draw an open U-shaped sample stroke")
     parser.add_argument("--gpu", type=int, default=0, help="Single RTX GPU index")
     parser.add_argument("--webrtc", action="store_true", help="Stream the live task to a WebRTC client")
     parser.add_argument("--public-ip", help="Server IP reachable by the WebRTC client")
@@ -81,7 +84,8 @@ def main() -> None:
 
         calibration = RGBDCalibration.load(args.calibration)
         stage_utils.create_new_stage()
-        camera, robot_usd = create_scene(SCENE, args.robot_usd, camera_calibration=calibration)
+        camera, robot_usd = create_scene(SCENE, args.robot_usd, camera_calibration=calibration,
+                                         open_outline=args.demo_open)
         if not args.headless or args.webrtc:
             ViewportManager.set_camera_view(
                 ViewportManager.get_camera(), eye=[1.5, -1.45, 1.55], target=[0.3, 0.0, 0.45]
@@ -141,10 +145,10 @@ def main() -> None:
 
         if not args.scene_only:
             if panel:
-                panel.set_status("Detecting contour and checking trajectory...")
+                panel.set_status("Detecting path and checking trajectory...")
             settings = RGBDSettings(waypoint_spacing_m=SCENE.waypoint_spacing_m, tcp_offset_m=SCENE.tcp_offset_m,
                                     approach_height_m=SCENE.approach_height_m, dark_threshold=SCENE.dark_threshold,
-                                    min_contour_area_px=SCENE.min_contour_area_px)
+                                    min_contour_area_px=SCENE.min_contour_area_px, path_mode=args.path_mode)
             result = generate_rgbd_trajectory(image_rgb, depth_m, calibration, settings)
             save_rgbd_trajectory(result, image_rgb, args.output_dir)
             path = result.path
@@ -156,18 +160,19 @@ def main() -> None:
                      contour_base=result.contour_base, surface_points=path.surface_points,
                      poses_base=poses, joint_positions=joints, phases=phases,
                      surface_normal_base=result.surface.normal, surface_point_base=result.surface.point,
-                     coordinate_frame="robot_base", base_from_camera=calibration.base_from_camera)
+                     coordinate_frame="robot_base", base_from_camera=calibration.base_from_camera,
+                     path_closed=result.closed)
             draw_plan(stage, path, world_from_base)
             if not stage.GetRootLayer().Export(str(stage_path)):
                 raise RuntimeError(f"Could not export planned scene to {stage_path}")
-            print(f"Preflight passed: {len(path.surface_points)} contour samples; {len(joints) - 1} motion targets", flush=True)
+            print(f"Preflight passed: {len(path.surface_points)} path samples; {len(joints) - 1} motion targets", flush=True)
             if not args.plan_only:
                 controller.follow_cartesian_path(joints, poses, phases)
                 actual_world = np.array([row[2:5] for row in controller.history]) @ world_from_base[:3, :3].T + world_from_base[:3, 3]
                 draw_polyline(stage, "TCPActual", actual_world, (1.0, 0.4, 0.0))
                 if not stage.GetRootLayer().Export(str(args.output_dir / "quadweld_result.usda")):
                     raise RuntimeError("Could not export result scene")
-                print("Contour pass complete; TCP lifted to approach height.", flush=True)
+                print("Path pass complete; TCP lifted at the final point.", flush=True)
 
         if panel:
             panel.set_status("Task complete. Close the application to exit." if not args.plan_only and not args.scene_only

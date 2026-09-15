@@ -9,29 +9,37 @@ class CartesianPath:
     surface_points: np.ndarray
     poses: np.ndarray
     phases: list[str]
+    closed: bool = True
 
 
-def resample_closed_polygon(points, spacing):
+def resample_polyline(points, spacing, *, closed):
     points = np.asarray(points, dtype=float)
-    if spacing <= 0 or len(points) < 3 or not np.isfinite(points).all():
-        raise ValueError("Need a finite polygon and positive spacing")
-    if np.linalg.norm(points[-1] - points[0]) < 1e-10:
+    if spacing <= 0 or len(points) < (3 if closed else 2) or not np.isfinite(points).all():
+        raise ValueError("Need a finite path and positive spacing")
+    if closed and np.linalg.norm(points[-1] - points[0]) < 1e-10:
         points = points[:-1]
+    if not closed and np.linalg.norm(points[-1] - points[0]) < 1e-10:
+        raise ValueError("An open path must have distinct endpoints")
     sampled = []
-    for start, end in zip(points, np.roll(points, -1, axis=0)):
+    ends = np.roll(points, -1, axis=0) if closed else points[1:]
+    for start, end in zip(points if closed else points[:-1], ends):
         length = np.linalg.norm(end - start)
         if length < 1e-9:
             continue
         count = max(1, int(np.ceil(length / spacing)))
         sampled.extend(start + (end - start) * t for t in np.arange(count) / count)
-    if len(sampled) < 3:
-        raise ValueError("Degenerate contour")
-    return np.vstack((sampled, sampled[0]))
+    if len(sampled) < (3 if closed else 1):
+        raise ValueError("Degenerate path")
+    return np.vstack((sampled, sampled[0] if closed else points[-1]))
 
 
-def generate_waypoints(contour_points, config, plane_normal=(0, 0, 1)):
+def resample_closed_polygon(points, spacing):
+    return resample_polyline(points, spacing, closed=True)
+
+
+def generate_waypoints(contour_points, config, plane_normal=(0, 0, 1), *, closed=True):
     """Generate poses in the same coordinate frame as the contour and normal."""
-    surface = resample_closed_polygon(contour_points, config.waypoint_spacing_m)
+    surface = resample_polyline(contour_points, config.waypoint_spacing_m, closed=closed)
     normal = np.asarray(plane_normal, dtype=float)
     normal /= np.linalg.norm(normal)
     z_axis = -normal  # Tool +Z points towards the plate.
@@ -48,13 +56,14 @@ def generate_waypoints(contour_points, config, plane_normal=(0, 0, 1)):
     if count < 1:
         raise ValueError("Approach height must exceed TCP clearance")
     descent = np.linspace(approach, trace[0], count + 1)[1:]
-    retreat = np.linspace(trace[-1], approach, count + 1)[1:]
+    retreat_target = surface[-1] + config.approach_height_m * normal
+    retreat = np.linspace(trace[-1], retreat_target, count + 1)[1:]
     positions = np.vstack((approach, descent, trace[1:], retreat))
     phases = ["approach"] + ["descend"] * len(descent) + ["trace"] * (len(trace) - 1) + ["retreat"] * len(retreat)
     poses = np.repeat(np.eye(4)[None], len(positions), axis=0)
     poses[:, :3, :3] = rotation
     poses[:, :3, 3] = positions
-    return CartesianPath(surface, poses, phases)
+    return CartesianPath(surface, poses, phases, closed)
 
 
 def interpolate_pose(start, end, fraction):

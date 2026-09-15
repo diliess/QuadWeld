@@ -17,11 +17,13 @@ def main():
     parser.add_argument("--output-dir", type=Path, default=Path("outputs/rgbd_offline"))
     parser.add_argument("--spacing", type=float, default=0.01)
     parser.add_argument("--clearance", type=float, default=0.01)
+    parser.add_argument("--path-mode", choices=("auto", "closed", "open"), default="auto")
     args = parser.parse_args()
     rgb = np.asarray(Image.open(args.rgb).convert("RGB"))
     depth = np.load(args.depth, allow_pickle=False) if args.depth.suffix == ".npy" else np.asarray(Image.open(args.depth))
     result = generate_rgbd_trajectory(rgb, depth, RGBDCalibration.load(args.calibration),
-                                      RGBDSettings(waypoint_spacing_m=args.spacing, tcp_offset_m=args.clearance))
+                                      RGBDSettings(waypoint_spacing_m=args.spacing, tcp_offset_m=args.clearance,
+                                                   path_mode=args.path_mode))
     save_rgbd_trajectory(result, rgb, args.output_dir)
     print(f"Generated {len(result.path.poses)} base-frame poses from RGB-D: {args.output_dir}")
 

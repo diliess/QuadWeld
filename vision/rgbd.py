@@ -9,7 +9,7 @@ import numpy as np
 from scipy.spatial import ConvexHull
 
 from planning.waypoint_generator import CartesianPath, generate_waypoints
-from vision.contour_detector import detect_contour, save_overlay
+from vision.contour_detector import detect_path, save_overlay
 
 
 @dataclass
@@ -67,6 +67,7 @@ class RGBDSettings:
     min_plane_points: int = 100
     max_fit_points: int = 3000
     ransac_iterations: int = 160
+    path_mode: str = "auto"
 
 
 @dataclass
@@ -137,21 +138,31 @@ class RGBDTrajectory:
     surface: ObservedSurface
     diagnostics: dict
     mask: np.ndarray
+    closed: bool
 
 
 def generate_rgbd_trajectory(rgb, depth, calibration, settings=RGBDSettings()):
     width, height = calibration.image_size
     if rgb.shape != (height, width, 3) or depth.shape != (height, width):
         raise ValueError("RGB and registered depth must match the calibration image size")
-    contour, mask = detect_contour(rgb, threshold=settings.dark_threshold, min_area=settings.min_contour_area_px)
-    interior = np.zeros((height, width), np.uint8)
-    cv2.fillPoly(interior, [np.rint(contour).astype(np.int32)], 255)
-    interior = cv2.erode(interior, np.ones((9, 9), np.uint8)) > 0
+    detected = detect_path(rgb, threshold=settings.dark_threshold,
+                           min_area=settings.min_contour_area_px, mode=settings.path_mode)
+    contour, mask = detected.points, detected.mask
+    if detected.closed:
+        support = np.zeros((height, width), np.uint8)
+        cv2.fillPoly(support, [np.rint(contour).astype(np.int32)], 255)
+        support = cv2.erode(support, np.ones((9, 9), np.uint8)) > 0
+    else:
+        # An open stroke has no interior: sample the adjacent visible surface,
+        # leaving a gap around the dark line where depth is often missing.
+        outer = cv2.dilate(detected.target_mask, np.ones((31, 31), np.uint8))
+        inner = cv2.dilate(detected.target_mask, np.ones((7, 7), np.uint8))
+        support = (outer > 0) & (inner == 0)
     depth_m = np.asarray(depth, dtype=float) * calibration.depth_scale_to_m
     valid = np.isfinite(depth_m) & (depth_m > settings.min_depth_m) & (depth_m < settings.max_depth_m)
-    if not interior.any() or (valid & interior).sum() / interior.sum() < settings.min_valid_depth_fraction:
-        raise RuntimeError("Not enough registered depth inside the detected contour; no scene-coordinate fallback")
-    v, u = np.nonzero(valid & interior)
+    if not support.any() or (valid & support).sum() / support.sum() < settings.min_valid_depth_fraction:
+        raise RuntimeError("Not enough registered depth near the detected path; no scene-coordinate fallback")
+    v, u = np.nonzero(valid & support)
     cloud = calibration.rays(np.column_stack((u, v))) * depth_m[v, u, None]
     center, normal, diagnostics = fit_plane(cloud, settings)
     rays = calibration.rays(contour)
@@ -173,25 +184,26 @@ def generate_rgbd_trajectory(rgb, depth, calibration, settings=RGBDSettings()):
     # Keep the collision/clearance plane identical to the fitted trajectory plane.
     cloud = cloud - ((cloud - center) @ normal)[:, None] * normal
     surface = ObservedSurface.from_points(cloud @ rotation.T + translation, normal_base)
-    path = generate_waypoints(base_points, settings, normal_base)
+    path = generate_waypoints(base_points, settings, normal_base, closed=detected.closed)
     diagnostics.update(coordinate_frame="robot_base", depth_source="registered_optical_z",
                        surface_source="RGB-D RANSAC plane", surface_point_base=surface.point.tolist(),
                        surface_normal_base=normal_base.tolist(), observed_surface_points=len(cloud),
-                       contour_vertices=len(contour), waypoint_count=len(path.poses))
-    return RGBDTrajectory(contour, camera_points, base_points, path, surface, diagnostics, mask)
+                       contour_vertices=len(contour), waypoint_count=len(path.poses),
+                       path_type="closed" if detected.closed else "open")
+    return RGBDTrajectory(contour, camera_points, base_points, path, surface, diagnostics, mask, detected.closed)
 
 
 def save_rgbd_trajectory(result, rgb, output_dir):
     output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
-    save_overlay(rgb, result.contour_pixel, output_dir / "contour_overlay.png")
+    save_overlay(rgb, result.contour_pixel, output_dir / "contour_overlay.png", closed=result.closed)
     if not cv2.imwrite(str(output_dir / "contour_mask.png"), result.mask):
         raise OSError("Could not save contour mask")
     np.savez(output_dir / "rgbd_trajectory.npz", contour_pixel=result.contour_pixel,
              contour_camera=result.contour_camera, contour_base=result.contour_base,
              surface_points=result.path.surface_points, poses_base=result.path.poses,
              phases=result.path.phases, surface_normal_base=result.surface.normal,
-             surface_point_base=result.surface.point, coordinate_frame="robot_base")
+             surface_point_base=result.surface.point, coordinate_frame="robot_base", path_closed=result.closed)
     np.savetxt(output_dir / "waypoints_base.csv", result.path.poses[:, :3, 3], delimiter=",",
                header="tcp_x_m,tcp_y_m,tcp_z_m", comments="")
     (output_dir / "vision_report.json").write_text(json.dumps(result.diagnostics, indent=2) + "\n")
