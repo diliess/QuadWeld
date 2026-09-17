@@ -3,3 +3,4 @@ __pycache__/
 outputs/
 NvStreamer-*.etli
 assets/vendor/rm_models/
+thirdparty/sam3/
