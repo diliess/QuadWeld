@@ -4,7 +4,7 @@
 
 ## 场景参数
 
-所有位置和尺寸使用米；世界坐标系为 Z 轴向上。
+所有位置和尺寸使用米；世界坐标系为 Z 轴向上。默认使用 UR5e，以下为其场景参数；RM65 的独立配置见下文。
 
 | 对象 | 参数 |
 | --- | --- |
@@ -38,6 +38,38 @@ conda activate quadweld
 cd /data/huangliqi/QuadWeld
 python main.py
 ```
+
+### 切换机械臂
+
+通过 `--robot ur5e|rm65` 选择机器人，省略时使用 UR5e。两者共用 RGB-D 感知、轨迹生成和控制流程：
+
+```bash
+# RM65：无界面执行完整任务
+python main.py --robot rm65 --headless --gpu 4 --output-dir outputs/rm65
+
+# RM65：通过 Windows WebRTC 观看，连接后点击 Start task
+python main.py --robot rm65 --webrtc --gpu 4 --output-dir outputs/rm65
+
+# 切回 UR5e
+python main.py --robot ur5e --webrtc --gpu 4 --output-dir outputs/ur5e
+```
+
+串流命令每次只运行一个实例。机器人在启动时选择，切换需要退出当前进程后重新启动。`--plan-only`、`--demo-open` 和 `--path-mode` 对两种机器人均适用。RM65 开放 U 形路径也已通过视觉与 IK 预检查（42 个路径采样点、103 个运动目标），结果见 `outputs/rm65_open_validation/`。
+
+| 配置 | UR5e | RM65-6F |
+| --- | --- | --- |
+| USD | Isaac Sim 官方 UR5e 资产 | `assets/robots/rm65/RM65-6F/RM65-6F.usda` |
+| 末端连杆 | `wrist_3_link` | `link_6` |
+| 基座世界位置 | `(0.45, -0.62, 0.45)` | `(0.45, -0.38, 0.60)` |
+| 测试矩形尺寸 | `0.30 × 0.20 m` | `0.20 × 0.10 m` |
+| 相机标定 | `calibration/body_rgbd.json` | `calibration/rm65_body_rgbd.json` |
+| 关节驱动刚度 / 阻尼 | `100000 / 5000` | `10000 / 500` |
+
+RM65 的安装座更近、更高，测试轮廓更小，以满足当前工具朝下姿态的可达范围；这些配置只决定仿真测试场景，轨迹仍由视觉观测生成。各自的 home 关节角定义在 `config.py`，拍照时避开任务轮廓。RM65 相机相对基座位于 `(0, 0.08, 0.55)`，向前下方观察。
+
+RM65 暂以 `link_6` 原点作为工具安装原点，沿其 +Z 添加 120 mm 简化工具。实际工具需校准 `flange_translation`、`flange_quaternion_wxyz` 和 `tool_length_m`；示例相机外参也需替换为实测标定。
+
+`--robot-usd /path/to/model.usda` 只覆盖所选机器人的资产路径，不自动识别机型；RM65 应同时指定 `--robot rm65`。`--calibration /path/to/calibration.json` 可覆盖该机器人的默认相机标定。RM65 资产来源及目录说明见 [assets/README.md](assets/README.md)。
 
 无界面执行完整一圈并退出：
 
@@ -106,13 +138,14 @@ isaacsim isaacsim.exp.full.streaming --no-window \
 python main.py --headless --robot-usd /absolute/path/to/ur5e.usd
 ```
 
-成功后生成的文件如下。USD 仍引用 UR5e 资产；复制到其他机器时需保证资产可访问。
+成功后生成的文件如下。USD 仍引用所选机器人的资产；复制到其他机器时需保证资产及其依赖可访问。
 
 | 文件（`outputs/` 下） | 内容 |
 | --- | --- |
 | `body_rgb.png` | 在 home 姿态采集的机身 RGB，未加入调试线 |
 | `body_depth_m.npy`、`body_depth_preview.png` | 对齐的光轴 Z 深度（米）和仅供查看的灰度预览 |
 | `rgbd_calibration.json` | 本次使用的安装与内参标定副本 |
+| `robot_config.json` | 本次选择的机器人、资产路径、安装与控制参数 |
 | `contour_mask.png`、`contour_overlay.png` | 阈值图、路径叠加；红点为起点，开放路径的蓝点为终点 |
 | `waypoints_base.csv`、`rgbd_trajectory.npz` | 粗轨迹：基座系 TCP 位置/位姿、相机系与基座系轮廓、运动阶段、估计板面 |
 | `vision_report.json` | 深度平面拟合内点比例、残差、法向及路径点数 |
@@ -154,7 +187,7 @@ python generate_rgbd_trajectory.py \
 
 本版直接恢复三维路径及板面法向，不依赖板子绝对世界位姿，也没有建立带稳定编号的板坐标系。可见的 AprilTag/ArUco 标记目前不参与计算；后续需要跨次观测保持同一起点、板坐标系或关联 CAD 路径时，再加入标记识别及其到任务轮廓的标定。当前仍要求可见的高对比度闭合任务轮廓，只有定位标记并不足以推断任意焊缝。
 
-`robot/kinematics.py` 仍从机器人 USD 提取六个关节的运动学结构；主流程将模型置于基座系后求 IK。官方 UR5e 缺少 `tool0`，场景构造时根据其夹具挂载坐标建立 `wrist_3_link/tool0/TCP`。IK 使用有界数值最小二乘，以上一个关节解为初值，同时约束位置和姿态。世界变换只用于仿真显示和实际 link 位姿回读适配。实机应替换为机器人模型、编码器/FK 和控制接口；本次移除的是**工件位置特权信息**，并非把整个仿真控制适配器也替换为硬件驱动。
+`robot/kinematics.py` 仍从机器人 USD 提取六个关节的运动学结构；主流程将模型置于基座系后求 IK。`robot/asset.py` 根据 USD 物理属性查找刚体和 articulation 根，兼容 UR5e 与 RM65 的不同层级，并在所选末端连杆下建立 `tool0/TCP`。UR5e 的工具安装坐标来自资产中的夹具挂载关节；RM65 使用配置中的安装变换。IK 使用有界数值最小二乘，以上一个关节解为初值，同时约束位置和姿态。世界变换只用于仿真显示和实际 link 位姿回读适配。实机应替换为机器人模型、编码器/FK 和控制接口；本次移除的是**工件位置特权信息**，并非把整个仿真控制适配器也替换为硬件驱动。
 
 `planning/waypoint_generator.py` 负责几何路径；`robot/robot_controller.py` 提供 `move_to_pose` 和 `follow_cartesian_path`。预先求解整条路径，拒绝不可达目标和明显关节跳变。执行采用五次时间插值的关节位置目标，限制速度和加速度；每个采样点到达后继续，拐角停速，不做切角平滑。相邻关节插值段近似 Cartesian 直线，第一版不保证严格恒定焊接速度。闭合路径走回首点后抬起；开放路径在终点抬起。
 
@@ -173,6 +206,8 @@ python generate_rgbd_trajectory.py \
 CPU 测试覆盖图像平移、深度高度变化、倾斜板面、噪声/缺失/离群点、毫米深度单位、外参变换和无有效观测时拒绝规划，以及原有 IK、控制失败停止、串流开始门控。仿真使用理想渲染深度；单元测试加入了合成噪声，尚未验证真实 RGB-D 在反光金属上的数据质量。执行报告的跟踪误差是相对视觉生成路径的控制误差；离板间隙也是相对估计平面，不代表真实工件测量精度。
 
 本机 RGB-D 版本已通过 20 项 CPU 测试，并在 Isaac Sim 6 / RTX 3090（`--gpu 4`）完成闭合路径的 179 个运动目标、5,774 个执行采样，走圈后成功抬起。走圈相对视觉路径的 RMS 跟踪误差约 0.53 mm，最大约 0.84 mm；相对估计板面的间隙为 9.18–9.76 mm。验证结果在 `outputs/rgbd_validation/`。开放 U 形测试场景也完成了 147 个运动目标；走线最大偏差约 0.77 mm，并在终点抬到估计板面上方约 99.1 mm，结果在 `outputs/open_execution/`。
+
+机械臂切换版本通过 22 项 CPU 测试，其中 RM65 的 USD 运动学与厂商 URDF 在三个关节姿态下独立对照（该项需要本地厂商源文件及 USD Python 绑定）。RM65 已在同一 GPU 完成 128 个运动目标、4,192 个执行采样，沿线 RMS 跟踪误差约 0.96 mm、最大约 1.49 mm，随后成功抬起；结果见 `outputs/rm65_validation/`。UR5e 回归完成 179 个目标，沿线 RMS 约 0.53 mm，结果见 `outputs/ur5e_switch_validation/`。这些误差均相对于视觉参考轨迹。
 
 若图片没有钢板，检查机身相机视野、机械臂遮挡及裁剪范围。若默认资产加载失败，检查 Isaac Sim 资产根目录或使用 `--robot-usd`。若报 `No device could be created`、`NVML_ERROR_DRIVER_NOT_LOADED`，需要在能访问 NVIDIA 驱动和 GPU 的环境运行；无界面模式同样需要 GPU 渲染 RGB-D。离线生成器不需要 GPU。
 

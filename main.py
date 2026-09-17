@@ -3,6 +3,7 @@
 import argparse
 import importlib.metadata
 import json
+from dataclasses import asdict
 from pathlib import Path
 
 
@@ -22,10 +23,10 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--stream-port", type=int, default=47998, help="WebRTC UDP media port")
     parser.add_argument("--auto-start", action="store_true", help="Skip the WebRTC Start task gate")
     parser.add_argument("--exit-on-complete", action="store_true", help="Close the application after task completion")
-    parser.add_argument("--robot-usd", help="Local UR5e USD; defaults to the Isaac Sim assets root")
+    parser.add_argument("--robot", choices=("ur5e", "rm65"), default="ur5e", help="Robot installation and controller profile")
+    parser.add_argument("--robot-usd", help="Override the selected robot profile's USD asset")
     parser.add_argument("--calibration", type=Path,
-                        default=Path(__file__).resolve().parent / "calibration/body_rgbd.json",
-                        help="RGB-D intrinsics and camera-to-base calibration, independent of workpiece pose")
+                        help="Override the selected robot's RGB-D installation calibration")
     parser.add_argument(
         "--output-dir", type=Path, default=Path(__file__).resolve().parent / "outputs", help="Saved USD and RGB preview directory"
     )
@@ -77,11 +78,15 @@ def main() -> None:
         from isaacsim.core.rendering_manager import ViewportManager
         from isaacsim.core.simulation_manager import SimulationManager
 
-        from config import SCENE
+        from config import scene_config_for_robot
+        from robot.asset import articulation_path
         from scene.camera import create_rgbd_sensor, save_rgbd_frame
         from scene.create_scene import create_scene
         from vision.rgbd import RGBDCalibration, RGBDSettings, generate_rgbd_trajectory, save_rgbd_trajectory
 
+        SCENE = scene_config_for_robot(args.robot)
+        if args.calibration is None:
+            args.calibration = Path(__file__).resolve().parent / "calibration" / SCENE.camera_calibration_file
         calibration = RGBDCalibration.load(args.calibration)
         stage_utils.create_new_stage()
         camera, robot_usd = create_scene(SCENE, args.robot_usd, camera_calibration=calibration,
@@ -94,6 +99,8 @@ def main() -> None:
         SimulationManager.setup_simulation(dt=SCENE.physics_dt, device="cpu")
         args.output_dir.mkdir(parents=True, exist_ok=True)
         (args.output_dir / "rgbd_calibration.json").write_text(args.calibration.read_text())
+        (args.output_dir / "robot_config.json").write_text(json.dumps(
+            {**asdict(SCENE), "loaded_robot_usd": robot_usd}, indent=2) + "\n")
         # Invalidate a previous run's success before any new planning or execution.
         (args.output_dir / "execution_report.json").write_text(json.dumps(
             {"completed": False, "status": "scene_only" if args.scene_only else "not_executed"}, indent=2) + "\n")
@@ -102,7 +109,7 @@ def main() -> None:
             raise RuntimeError(f"Could not export scene to {stage_path}")
 
         sensor = create_rgbd_sensor(camera, SCENE)
-        robot = Articulation(SCENE.robot_prim_path)
+        robot = Articulation(articulation_path(stage_utils.get_current_stage(), SCENE.robot_prim_path))
         if not args.scene_only:
             import numpy as np
             from robot.kinematics import SerialKinematics
@@ -128,8 +135,8 @@ def main() -> None:
             panel.set_status("Initializing robot and capturing RGB-D...")
         app_utils.play(commit=True)
         app_utils.update_app(steps=10)
-        if robot.num_dofs != 6:
-            raise RuntimeError(f"Expected a six-DOF UR5e articulation, found {robot.num_dofs} DOFs")
+        if robot.num_dofs != len(SCENE.joint_names):
+            raise RuntimeError(f"Expected {len(SCENE.joint_names)} DOFs for {args.robot}, found {robot.num_dofs}")
         if not args.scene_only:
             controller = RobotController(robot, model, simulation_app, SCENE, args.output_dir,
                                          world_from_base=world_from_base)
@@ -138,6 +145,7 @@ def main() -> None:
             controller.initialize_home()
         preview_path = args.output_dir / "body_rgb.png"
         image_rgb, depth_m = save_rgbd_frame(sensor, simulation_app, args.output_dir)
+        print(f"Robot profile: {args.robot}")
         print(f"Robot USD: {robot_usd}")
         print(f"Robot DOFs: {robot.num_dofs}")
         print(f"Scene saved: {stage_path}")

@@ -1,0 +1,52 @@
+#usda 1.0
+(
+    customLayerData = {
+        string creator = "URDF USD Converter v0.1.2"
+    }
+    defaultPrim = "tn__RM656F_e9"
+    doc = """Generated from Composed Stage of root layer /tmp/tmpyzx60qi7/RM65-6F.usdc
+
+
+Generated from Composed Stage of root layer /tmp/urdf_import_RM65-6F_2fh01erk/usdex_RM65-6F/RM65-6F.usdc
+
+
+Generated from Composed Stage of root layer /tmp/urdf_import_RM65-6F_2fh01erk/temp_RM65-6F/RM65-6F.usd
+
+
+Generated from Composed Stage of root layer /data/huangliqi/QuadWeld/outputs/robots/rm65/RM65-6F/payloads/base.usd
+"""
+    kilogramsPerUnit = 1
+    metersPerUnit = 1
+    upAxis = "Z"
+)
+
+def Xform "tn__RM656F_e9" (
+    prepend references = @./payloads/base.usda@
+    variants = {
+        string Physics = "physx"
+    }
+    append variantSets = "Physics"
+)
+{
+    variantSet "Physics" = {
+        "mujoco" (
+            prepend payload = @./payloads/Physics/mujoco.usda@
+        ) {
+
+        }
+        "none" {
+
+        }
+        "physics" (
+            prepend payload = @./payloads/Physics/physics.usda@
+        ) {
+
+        }
+        "physx" (
+            prepend payload = @./payloads/Physics/physx.usda@
+        ) {
+
+        }
+    }
+}
+

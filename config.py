@@ -1,14 +1,21 @@
 """Stage-one scene parameters. All distances are in metres."""
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
+from pathlib import Path
 
 
 @dataclass(frozen=True)
 class SceneConfig:
-    # World is Z-up. The UR5e asset has six actuated joints and a fixed base.
+    # World is Z-up. Robot profiles share the same visual planning parameters.
+    robot_name: str = "ur5e"
     robot_mount_prim_path: str = "/World/RobotMount"
     robot_prim_path: str = "/World/RobotMount/Robot"
     robot_usd_relative_path: str = "/Isaac/Robots/UniversalRobots/ur5e/ur5e.usd"
+    robot_local_usd: str | None = None
+    robot_tool_link: str = "wrist_3_link"
+    robot_flange_joint: str | None = "joints/robot_gripper_joint"
+    flange_translation: tuple[float, float, float] = (0., 0., 0.)
+    flange_quaternion_wxyz: tuple[float, float, float, float] = (1., 0., 0., 0.)
     robot_base_position_world: tuple[float, float, float] = (0.45, -0.62, 0.45)
     robot_stand_size_xy: tuple[float, float] = (0.26, 0.26)
     robot_base_frame: str = "base_link"
@@ -51,6 +58,7 @@ class SceneConfig:
     outline_clearance: float = 0.0001
 
     camera_prim_path: str = "/World/RobotMount/Sensors/BodyRGBD"
+    camera_calibration_file: str = "body_rgbd.json"
     camera_resolution: tuple[int, int] = (640, 480)  # Width, height in pixels.
     camera_focal_length_m: float = 0.024
     camera_near_m: float = 0.05
@@ -62,3 +70,25 @@ class SceneConfig:
 
 
 SCENE = SceneConfig()
+
+
+def scene_config_for_robot(name: str) -> SceneConfig:
+    """Select installation and control parameters without changing visual inference."""
+    if name == "ur5e":
+        return SCENE
+    if name == "rm65":
+        return replace(
+            SCENE, robot_name="rm65",
+            robot_local_usd=str(Path(__file__).resolve().parent /
+                                "assets/robots/rm65/RM65-6F/RM65-6F.usda"),
+            robot_tool_link="link_6", robot_flange_joint=None,
+            joint_names=tuple(f"joint_{i}" for i in range(1, 7)),
+            # Smaller reachable demo with the 120 mm tool pointing downward.
+            robot_base_position_world=(0.45, -0.38, 0.60),
+            robot_stand_size_xy=(0.12, 0.12), rectangle_size=(0.20, 0.10),
+            camera_calibration_file="rm65_body_rgbd.json",
+            # TCP near (0.20, 0.15, 0.15) in base frame, clear of the camera's task view.
+            home_joint_positions=(-2.498098, 0.180659, 1.629718, 0., 1.331208, -2.498095),
+            drive_stiffness=10000., drive_damping=500.,
+        )
+    raise ValueError(f"Unknown robot profile: {name}")

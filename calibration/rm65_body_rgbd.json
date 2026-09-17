@@ -1,0 +1,9 @@
+{
+  "description": "Nominal body RGB-D mounting for the RM65 fixed-base demo. Replace with measured installation calibration on hardware; contains no workpiece pose.",
+  "image_size": [640, 480],
+  "camera_matrix": [[400.0, 0.0, 320.0], [0.0, 400.0, 240.0], [0.0, 0.0, 1.0]],
+  "distortion_coefficients": [0.0, 0.0, 0.0, 0.0, 0.0],
+  "depth_scale_to_m": 1.0,
+  "depth_convention": "optical_z",
+  "base_from_camera": [[1.0, 0.0, 0.0, 0.0], [0.0, -0.9067211118885072, 0.4217307497155847, 0.08], [0.0, -0.4217307497155847, -0.9067211118885072, 0.55], [0.0, 0.0, 0.0, 1.0]]
+}

@@ -87,6 +87,9 @@ class RobotController:
 
     def initialize_home(self):
         q = np.array(self.config.home_joint_positions)
+        if (q.shape != (len(self.model.names),) or not np.isfinite(q).all()
+                or np.any(q < self.model.limits[:, 0]) or np.any(q > self.model.limits[:, 1])):
+            raise ValueError(f"Invalid home joint positions for {self.config.robot_name}")
         # One reset-state initialization; all subsequent motion uses drive targets.
         self.robot.set_dof_positions(q, dof_indices=self.indices)
         self.robot.set_dof_velocities(np.zeros_like(q), dof_indices=self.indices)

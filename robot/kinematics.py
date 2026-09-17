@@ -67,6 +67,7 @@ class SerialKinematics:
     @classmethod
     def from_stage(cls, stage, config):
         from pxr import Usd, UsdGeom, UsdPhysics
+        from robot.asset import rigid_body_path
 
         def matrix(position, quaternion):
             result = np.eye(4)
@@ -83,7 +84,7 @@ class SerialKinematics:
         joints = {p.GetName(): UsdPhysics.RevoluteJoint(p) for p in stage.Traverse()
                   if p.IsA(UsdPhysics.RevoluteJoint) and p.GetPath().HasPrefix(config.robot_prim_path)}
         parents, children, axes, limits = [], [], [], []
-        previous = f"{config.robot_prim_path}/{config.robot_base_frame}"
+        previous = rigid_body_path(stage, config.robot_prim_path, config.robot_base_frame)
         base_path = previous
         for name in config.joint_names:
             if name not in joints:
@@ -99,6 +100,8 @@ class SerialKinematics:
             bounds = np.deg2rad([joint.GetLowerLimitAttr().Get(), joint.GetUpperLimitAttr().Get()])
             limits.append(np.where(np.isfinite(bounds), bounds, [-2 * np.pi, 2 * np.pi]))
         tcp_path = f"{previous}/{config.end_effector_frame}/TCP"
+        if stage.GetPrimAtPath(previous).GetName() != config.robot_tool_link:
+            raise RuntimeError(f"Joint chain does not end at configured tool link {config.robot_tool_link}")
         return cls(list(config.joint_names), np.array(parents), np.array(children), np.array(axes),
                    np.array(limits), world(base_path), np.linalg.inv(world(previous)) @ world(tcp_path),
                    base_path, previous, tcp_path)
