@@ -1,6 +1,8 @@
-# 本地机器人资产
+# 本地资产
 
 目录用途：`vendor/` 保存厂商提供的 URDF 和网格源文件，`robots/` 保存转换后可复用的 USD 资产。仿真图像、轨迹和执行报告仍保存在项目根目录的 `outputs/`。
+
+`workpieces/` 保存项目生成的拼板和开口盒子 USD，可直接导入 Isaac Sim；尺寸、坐标原点和重建方法见 [工件说明](workpieces/README.md)。
 
 RM65-6F 已完成 USD 转换，主入口为 `robots/rm65/RM65-6F/RM65-6F.usda`。其 `payloads/` 包含网格、材质及物理配置，移动或分发时需保留整个 `RM65-6F/` 目录。重新转换时，将 `URDFImporterConfig.usd_path` 设置为项目中的 `assets/robots/rm65/` 绝对路径。
 

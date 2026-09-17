@@ -2,6 +2,48 @@
 
 在 `plan.md` 第一阶段控制器上，将感知改为机身固定 RGB-D：采集对齐的 RGB 和深度 → 检测闭合轮廓或开放线条 → 深度点云 RANSAC 拟合板面 → 恢复三维路径 → 用安装标定变换到机械臂基座系 → 生成粗轨迹 → IK 预检查 → 接近、下降、沿线运动、抬起。**生成轨迹不读取 USD 的钢板位置、法向、尺寸或角点**，深度不可用时终止。本版是静态观测后执行，尚未实现移动中的在线重规划。
 
+## 拼板与开口盒子
+
+现在可直接在 Isaac Sim 中创建两种工件：`--workpiece plate-grid` 为多个独立方板组成的拼板，`--workpiece open-box` 为底板和四面侧壁组成的开口盒子。省略参数时仍使用原来的 `outline` 黑色轮廓示例。
+
+新工件自动进入**场景预览与 RGB-D 采集模式**：机械臂初始化到拍照用的 home 姿态，随后保持，不执行焊缝识别或沿线运动。当前检测器不支持拼板的交叉分支，单平面规划器也未处理盒壁；因此新工件不能与 `--plan-only` 或 `--demo-open` 一起使用。
+
+进入 `quadweld` 环境后，通过 Windows WebRTC 客户端观看（两条命令分别运行，切换前退出上一实例；GPU 编号按本机空闲情况调整）：
+
+```bash
+# 2×2 方板，真实 3 mm 间隙；连接后可直接查看
+python main.py --workpiece plate-grid --webrtc --auto-start --gpu 1 --output-dir outputs/plate_grid
+
+# 开口盒子，观察底板与侧壁的交接处
+python main.py --workpiece open-box --webrtc --auto-start --gpu 1 --output-dir outputs/open_box
+```
+
+也支持 `--robot rm65`。去掉 `--auto-start` 后，在串流面板点击 **Capture RGB-D** 或在终端按回车，才初始化机械臂并采集图像。使用本地图形界面时去掉 `--webrtc`；只生成、拍照并退出时将其替换为 `--headless`。
+
+| 参数 | 默认值 | 含义 |
+| --- | --- | --- |
+| `--grid-count` | `2` | 每一边的板件数，总共 N×N 块 |
+| `--tile-size` | `0.20` | 单块正方形板边长，米 |
+| `--seam-gap` | `0.003` | 相邻板之间的真实间隙，米 |
+| `--wall-height` | `0.12` | 盒内底面到侧壁顶端的高度，米 |
+| `WorkpieceConfig.thickness_m` | `0.006` | 板件厚度，米，在 `config.py` 设置 |
+| `WorkpieceConfig.box_size_m` | `0.40` | 盒子外部边长，米，在 `config.py` 设置 |
+
+例如生成 3×3 拼板，保持整体尺寸接近默认工件：
+
+```bash
+python main.py --workpiece plate-grid --grid-count 3 --tile-size 0.14 --seam-gap 0.004 \
+  --headless --gpu 1 --output-dir outputs/plate_grid_3x3
+```
+
+默认拼板外尺寸为 `0.403 × 0.403 m`，盒子外尺寸为 `0.40 × 0.40 × 0.126 m`（包含底板厚度）。每块板具有独立静态碰撞体，盒内空腔保留。拼板下方有支撑垫，间隙不是用黑色几何条填出来的；缝中深度可能来自下面的支架。材质为简单金属材质，并增加斜上方区域光。这些是理想几何工件，尚未加入锈蚀、坡口、焊道或加工纹理。
+
+每次运行保存 `workpiece.usda`（独立、可复用的工件）、`quadweld_scene.usda`（包含机器人与相机的完整场景）、`body_rgb.png`、`body_depth_m.npy` 和 `body_depth_preview.png`。配置保存在 `robot_config.json` 的 `workpiece` 字段中。`execution_report.json` 的 `status=scene_only` 表示预览，不代表完成焊接任务。
+
+两份默认资产也保存在 [assets/workpieces/](assets/workpieces/README.md)，可直接导入其他 Isaac Sim 场景。资产使用米、Z 向上，默认根节点为 `/Workpiece`；原点为拼板上表面中心或盒内底面中心。独立资产不含相机、灯光和底座，不依赖外部贴图。建模尺寸仅供场景生成使用，没有传给感知或轨迹生成器。
+
+本次验证通过 27 项 CPU 测试，并在 Isaac Sim 6 / RTX 3090 上生成两种工件的 RGB-D。拼板同时验证了 WebRTC 服务与预览面板启动，盒子验证了无界面采集，均正常退出；客户端实际视频接收仍取决于网络连接。原矩形场景回归通过 106 个路径采样点、179 个运动目标的视觉与 IK 预检查，本次未重复沿线执行。预览图片见 [拼板](outputs/plate_grid/body_rgb.png) 和 [盒子](outputs/open_box/body_rgb.png)。
+
 ## 场景参数
 
 所有位置和尺寸使用米；世界坐标系为 Z 轴向上。默认使用 UR5e，以下为其场景参数；RM65 的独立配置见下文。
@@ -85,7 +127,7 @@ python main.py --headless
 python main.py --headless --plan-only
 ```
 
-`--plan-only` 会将机器人初始化到拍照用的 home 姿态。使用 `--scene-only` 保留仅建场景、拍照的流程。
+`--plan-only` 与 `--scene-only` 都会将机器人初始化到拍照用的 home 姿态。`--scene-only` 随后仅拍照，不规划或执行路径。
 默认 `--path-mode auto` 自动区分闭合轮廓和开放线条，也可用 `--path-mode closed` 或 `--path-mode open` 限定类型。运行 `python main.py --headless --plan-only --demo-open` 会把测试矩形改成开放 U 形线，用于检查端点到端点规划。
 除 Isaac Sim 外，算法使用 NumPy、SciPy、OpenCV 和 Pillow；可用以下命令检查当前环境是否已包含它们：
 

@@ -1,7 +1,37 @@
 """Stage-one scene parameters. All distances are in metres."""
 
 from dataclasses import dataclass, replace
+import math
 from pathlib import Path
+
+
+@dataclass(frozen=True)
+class WorkpieceConfig:
+    """Procedural fixtures; local Z=0 is the plate top or inside box floor."""
+
+    kind: str = "outline"
+    grid_count: int = 2
+    tile_size_m: float = 0.20
+    gap_m: float = 0.003
+    thickness_m: float = 0.006
+    box_size_m: float = 0.40
+    wall_height_m: float = 0.12
+
+    def __post_init__(self):
+        if self.kind not in ("outline", "plate-grid", "open-box"):
+            raise ValueError(f"Unknown workpiece: {self.kind}")
+        if not isinstance(self.grid_count, int) or self.grid_count < 2:
+            raise ValueError("grid_count must be an integer >= 2")
+        dimensions = (self.tile_size_m, self.gap_m, self.thickness_m,
+                      self.box_size_m, self.wall_height_m)
+        if not all(math.isfinite(value) and value > 0 for value in dimensions):
+            raise ValueError("Workpiece dimensions must be finite and positive (metres)")
+        if self.box_size_m <= 2 * self.thickness_m:
+            raise ValueError("Box size must exceed twice its wall thickness")
+
+    @property
+    def grid_extent_m(self) -> float:
+        return self.grid_count * self.tile_size_m + (self.grid_count - 1) * self.gap_m
 
 
 @dataclass(frozen=True)
@@ -56,6 +86,7 @@ class SceneConfig:
     outline_width: float = 0.008
     outline_thickness: float = 0.0004
     outline_clearance: float = 0.0001
+    workpiece: WorkpieceConfig = WorkpieceConfig()
 
     camera_prim_path: str = "/World/RobotMount/Sensors/BodyRGBD"
     camera_calibration_file: str = "body_rgbd.json"

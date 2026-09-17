@@ -1,36 +1,15 @@
-"""Create the fixed robot, workpiece, rectangle, light, and body RGB-D camera."""
+"""Create the robot, selected workpiece, lighting, and body RGB-D camera."""
 
 from pathlib import Path
 
 from isaacsim.core.experimental.utils import stage as stage_utils
 from isaacsim.storage.native import get_assets_root_path
-from pxr import Gf, Sdf, UsdGeom, UsdLux, UsdPhysics, UsdShade
+from pxr import Gf, UsdGeom, UsdLux
 
 from config import SceneConfig
 from scene.camera import create_body_camera
+from scene.workpieces import add_workpiece, cuboid as _cuboid, material as _material
 from robot.asset import attach_tool
-
-
-def _material(stage, path: str, color: tuple[float, float, float]) -> UsdShade.Material:
-    material = UsdShade.Material.Define(stage, path)
-    shader = UsdShade.Shader.Define(stage, f"{path}/Shader")
-    shader.CreateIdAttr("UsdPreviewSurface")
-    shader.CreateInput("diffuseColor", Sdf.ValueTypeNames.Color3f).Set(Gf.Vec3f(*color))
-    shader.CreateInput("roughness", Sdf.ValueTypeNames.Float).Set(0.85)
-    material.CreateSurfaceOutput().ConnectToSource(shader.ConnectableAPI(), "surface")
-    return material
-
-
-def _cuboid(stage, path: str, center: tuple[float, float, float], size: tuple[float, float, float], material, *, collision: bool):
-    cube = UsdGeom.Cube.Define(stage, path)
-    cube.CreateSizeAttr(1.0)
-    cube.CreateExtentAttr([Gf.Vec3f(-0.5, -0.5, -0.5), Gf.Vec3f(0.5, 0.5, 0.5)])
-    cube.AddTranslateOp().Set(Gf.Vec3d(*center))
-    cube.AddScaleOp().Set(Gf.Vec3f(*size))
-    UsdShade.MaterialBindingAPI.Apply(cube.GetPrim()).Bind(material)
-    if collision:
-        UsdPhysics.CollisionAPI.Apply(cube.GetPrim())
-    return cube
 
 
 def _resolve_robot_usd(config: SceneConfig, robot_usd_override: str | None) -> str:
@@ -56,7 +35,7 @@ def _resolve_robot_usd(config: SceneConfig, robot_usd_override: str | None) -> s
 
 
 def create_scene(config: SceneConfig, robot_usd_override: str | None = None, *, camera_calibration,
-                 open_outline: bool = False):
+                 open_outline: bool = False, workpiece_asset: Path | None = None):
     stage = stage_utils.get_current_stage()
     UsdGeom.SetStageUpAxis(stage, UsdGeom.Tokens.z)
     UsdGeom.SetStageMetersPerUnit(stage, 1.0)
@@ -93,6 +72,26 @@ def create_scene(config: SceneConfig, robot_usd_override: str | None = None, *, 
     attach_tool(stage, config)
 
     UsdGeom.Xform.Define(stage, "/World/Workpiece")
+    if config.workpiece.kind == "outline":
+        _create_outline(stage, config, stand_material, plate_material, line_material, open_outline)
+    else:
+        if workpiece_asset is None:
+            raise ValueError("A generated USD asset is required for this workpiece")
+        add_workpiece(stage, config, workpiece_asset, stand_material)
+        # A broad angled light makes the physical edges and inside corners visible.
+        key = UsdLux.RectLight.Define(stage, "/World/Lights/WorkpieceKey")
+        key.CreateIntensityAttr(1600.0)
+        key.CreateWidthAttr(0.65)
+        key.CreateHeightAttr(0.65)
+        key.AddTranslateOp().Set(Gf.Vec3d(0.05, -0.40, 1.40))
+        key.AddRotateXYZOp().Set(Gf.Vec3f(20.0, -25.0, 0.0))
+
+    UsdGeom.Xform.Define(stage, f"{config.robot_mount_prim_path}/Sensors")
+    camera = create_body_camera(config, camera_calibration)
+    return camera, robot_usd
+
+
+def _create_outline(stage, config, stand_material, plate_material, line_material, open_outline):
     plate_x, plate_y, plate_z = config.plate_center_world
     plate_thickness = config.plate_size[2]
     plate_frame = UsdGeom.Xform.Define(stage, config.plate_frame_path)
@@ -131,7 +130,3 @@ def create_scene(config: SceneConfig, robot_usd_override: str | None = None, *, 
             line_material,
             collision=False,
         )
-
-    UsdGeom.Xform.Define(stage, f"{config.robot_mount_prim_path}/Sensors")
-    camera = create_body_camera(config, camera_calibration)
-    return camera, robot_usd

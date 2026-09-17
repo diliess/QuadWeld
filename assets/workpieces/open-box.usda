@@ -1,0 +1,95 @@
+#usda 1.0
+(
+    defaultPrim = "Workpiece"
+    metersPerUnit = 1
+    upAxis = "Z"
+)
+
+def Xform "Workpiece" (
+    customData = {
+        string workpieceType = "open-box"
+    }
+    doc = "Static steel assembly. Origin: top of plates / inside box floor. Units: metres."
+)
+{
+    def Scope "Looks"
+    {
+        def Material "Steel"
+        {
+            token outputs:surface.connect = </Workpiece/Looks/Steel/Shader.outputs:surface>
+
+            def Shader "Shader"
+            {
+                uniform token info:id = "UsdPreviewSurface"
+                color3f inputs:diffuseColor = (0.52, 0.56, 0.6)
+                float inputs:metallic = 0.7
+                float inputs:roughness = 0.48
+                token outputs:surface
+            }
+        }
+    }
+
+    def Xform "Parts"
+    {
+        def Cube "Bottom" (
+            prepend apiSchemas = ["MaterialBindingAPI", "PhysicsCollisionAPI"]
+        )
+        {
+            float3[] extent = [(-0.5, -0.5, -0.5), (0.5, 0.5, 0.5)]
+            rel material:binding = </Workpiece/Looks/Steel>
+            double size = 1
+            float3 xformOp:scale = (0.4, 0.4, 0.006)
+            double3 xformOp:translate = (0, 0, -0.003)
+            uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:scale"]
+        }
+
+        def Cube "LeftWall" (
+            prepend apiSchemas = ["MaterialBindingAPI", "PhysicsCollisionAPI"]
+        )
+        {
+            float3[] extent = [(-0.5, -0.5, -0.5), (0.5, 0.5, 0.5)]
+            rel material:binding = </Workpiece/Looks/Steel>
+            double size = 1
+            float3 xformOp:scale = (0.006, 0.4, 0.12)
+            double3 xformOp:translate = (-0.197, 0, 0.06)
+            uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:scale"]
+        }
+
+        def Cube "RightWall" (
+            prepend apiSchemas = ["MaterialBindingAPI", "PhysicsCollisionAPI"]
+        )
+        {
+            float3[] extent = [(-0.5, -0.5, -0.5), (0.5, 0.5, 0.5)]
+            rel material:binding = </Workpiece/Looks/Steel>
+            double size = 1
+            float3 xformOp:scale = (0.006, 0.4, 0.12)
+            double3 xformOp:translate = (0.197, 0, 0.06)
+            uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:scale"]
+        }
+
+        def Cube "FrontWall" (
+            prepend apiSchemas = ["MaterialBindingAPI", "PhysicsCollisionAPI"]
+        )
+        {
+            float3[] extent = [(-0.5, -0.5, -0.5), (0.5, 0.5, 0.5)]
+            rel material:binding = </Workpiece/Looks/Steel>
+            double size = 1
+            float3 xformOp:scale = (0.388, 0.006, 0.12)
+            double3 xformOp:translate = (0, -0.197, 0.06)
+            uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:scale"]
+        }
+
+        def Cube "BackWall" (
+            prepend apiSchemas = ["MaterialBindingAPI", "PhysicsCollisionAPI"]
+        )
+        {
+            float3[] extent = [(-0.5, -0.5, -0.5), (0.5, 0.5, 0.5)]
+            rel material:binding = </Workpiece/Looks/Steel>
+            double size = 1
+            float3 xformOp:scale = (0.388, 0.006, 0.12)
+            double3 xformOp:translate = (0, 0.197, 0.06)
+            uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:scale"]
+        }
+    }
+}
+

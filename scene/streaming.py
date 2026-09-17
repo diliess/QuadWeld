@@ -5,7 +5,7 @@ import sys
 
 
 class StreamingPanel:
-    def __init__(self):
+    def __init__(self, *, preview=False):
         import omni.ui as ui
 
         self.started = False
@@ -13,8 +13,9 @@ class StreamingPanel:
         with self.window.frame:
             with ui.VStack(spacing=8):
                 self.label = ui.Label("Ready. Connect your client, then start.", word_wrap=True)
-                self.button = ui.Button("Start task", clicked_fn=self.start, height=40)
-                ui.Label("Capture > Plan > Approach > Trace > Retreat", word_wrap=True)
+                self.button = ui.Button("Capture RGB-D" if preview else "Start task", clicked_fn=self.start, height=40)
+                ui.Label("Workpiece preview and RGB-D capture" if preview
+                         else "Capture > Plan > Approach > Trace > Retreat", word_wrap=True)
 
     def start(self):
         self.started = True
@@ -25,7 +26,7 @@ class StreamingPanel:
         self.label.text = message
 
     def wait_for_start(self, app):
-        print("WebRTC ready. Connect the Windows client, then click 'Start task' "
+        print("WebRTC ready. Connect the Windows client, then click the start/capture button "
               "in 'QuadWeld Task', or press Enter in this terminal.", flush=True)
         while not self.started:
             if not app.is_running():

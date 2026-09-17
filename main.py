@@ -3,11 +3,13 @@
 import argparse
 import importlib.metadata
 import json
-from dataclasses import asdict
+from dataclasses import asdict, replace
 from pathlib import Path
 
+from config import WorkpieceConfig
 
-def parse_args() -> argparse.Namespace:
+
+def parse_args(argv=None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Build the QuadWeld Isaac Sim 6 scene")
     parser.add_argument("--headless", action="store_true", help="Complete the task and exit without the GUI")
     mode = parser.add_mutually_exclusive_group()
@@ -16,6 +18,13 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--path-mode", choices=("auto", "closed", "open"), default="auto",
                         help="Detect a closed loop or endpoint-to-endpoint open stroke")
     parser.add_argument("--demo-open", action="store_true", help="Draw an open U-shaped sample stroke")
+    defaults = WorkpieceConfig()
+    parser.add_argument("--workpiece", choices=("outline", "plate-grid", "open-box"), default="outline",
+                        help="Workpiece geometry; plate-grid/open-box automatically use scene-only preview")
+    parser.add_argument("--grid-count", type=int, default=defaults.grid_count, help="Number of tiles per grid side")
+    parser.add_argument("--tile-size", type=float, default=defaults.tile_size_m, help="Square tile side length in metres")
+    parser.add_argument("--seam-gap", type=float, default=defaults.gap_m, help="Physical gap between tiles in metres")
+    parser.add_argument("--wall-height", type=float, default=defaults.wall_height_m, help="Box wall height in metres")
     parser.add_argument("--gpu", type=int, default=0, help="Single RTX GPU index")
     parser.add_argument("--webrtc", action="store_true", help="Stream the live task to a WebRTC client")
     parser.add_argument("--public-ip", help="Server IP reachable by the WebRTC client")
@@ -30,14 +39,27 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--output-dir", type=Path, default=Path(__file__).resolve().parent / "outputs", help="Saved USD and RGB preview directory"
     )
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
     if not all(1 <= port <= 65535 for port in (args.signal_port, args.stream_port)):
         parser.error("Streaming ports must be between 1 and 65535")
+    try:
+        args.workpiece_config = WorkpieceConfig(kind=args.workpiece, grid_count=args.grid_count,
+                                               tile_size_m=args.tile_size, gap_m=args.seam_gap,
+                                               wall_height_m=args.wall_height)
+    except ValueError as exc:
+        parser.error(str(exc))
+    if args.workpiece != "outline":
+        if args.plan_only or args.demo_open:
+            parser.error("plate-grid/open-box support scene preview and RGB-D capture only; "
+                         "--plan-only and --demo-open require --workpiece outline")
+        args.scene_only = True
     return args
 
 
 def main() -> None:
     args = parse_args()
+    if args.workpiece != "outline":
+        print(f"Workpiece preview: {args.workpiece}; capture RGB-D without planning or path execution.", flush=True)
     try:
         isaacsim_version = importlib.metadata.version("isaacsim")
     except importlib.metadata.PackageNotFoundError:
@@ -82,15 +104,21 @@ def main() -> None:
         from robot.asset import articulation_path
         from scene.camera import create_rgbd_sensor, save_rgbd_frame
         from scene.create_scene import create_scene
+        from scene.workpieces import export_workpiece_asset
         from vision.rgbd import RGBDCalibration, RGBDSettings, generate_rgbd_trajectory, save_rgbd_trajectory
 
-        SCENE = scene_config_for_robot(args.robot)
+        SCENE = replace(scene_config_for_robot(args.robot), workpiece=args.workpiece_config)
+        args.output_dir = args.output_dir.resolve()
+        args.output_dir.mkdir(parents=True, exist_ok=True)
+        workpiece_asset = None
+        if args.workpiece != "outline":
+            workpiece_asset = export_workpiece_asset(args.output_dir / "workpiece.usda", SCENE.workpiece)
         if args.calibration is None:
             args.calibration = Path(__file__).resolve().parent / "calibration" / SCENE.camera_calibration_file
         calibration = RGBDCalibration.load(args.calibration)
         stage_utils.create_new_stage()
         camera, robot_usd = create_scene(SCENE, args.robot_usd, camera_calibration=calibration,
-                                         open_outline=args.demo_open)
+                                         open_outline=args.demo_open, workpiece_asset=workpiece_asset)
         if not args.headless or args.webrtc:
             ViewportManager.set_camera_view(
                 ViewportManager.get_camera(), eye=[1.5, -1.45, 1.55], target=[0.3, 0.0, 0.45]
@@ -110,22 +138,22 @@ def main() -> None:
 
         sensor = create_rgbd_sensor(camera, SCENE)
         robot = Articulation(articulation_path(stage_utils.get_current_stage(), SCENE.robot_prim_path))
-        if not args.scene_only:
-            import numpy as np
-            from robot.kinematics import SerialKinematics
-            from robot.robot_controller import RobotController, plan_joint_path
-            from scene.debug import draw_plan, draw_polyline
+        import numpy as np
+        from robot.kinematics import SerialKinematics
+        from robot.robot_controller import RobotController, plan_joint_path
 
-            stage = stage_utils.get_current_stage()
-            model = SerialKinematics.from_stage(stage, SCENE)
-            world_from_base = model.world_from_base.copy()  # Simulator display/readback adapter only.
-            model.world_from_base = np.eye(4)
+        stage = stage_utils.get_current_stage()
+        model = SerialKinematics.from_stage(stage, SCENE)
+        world_from_base = model.world_from_base.copy()  # Simulator display/readback adapter only.
+        model.world_from_base = np.eye(4)
+        if not args.scene_only:
+            from scene.debug import draw_plan, draw_polyline
             model.save(args.output_dir / "robot_kinematics.npz")
         panel = None
         if args.webrtc:
             from scene.streaming import StreamingPanel
 
-            panel = StreamingPanel()
+            panel = StreamingPanel(preview=args.scene_only)
             print(f"WebRTC: TCP {args.signal_port}, UDP {args.stream_port}; "
                   f"server={args.public_ip or 'server network IP'}", flush=True)
             if args.auto_start:
@@ -137,19 +165,24 @@ def main() -> None:
         app_utils.update_app(steps=10)
         if robot.num_dofs != len(SCENE.joint_names):
             raise RuntimeError(f"Expected {len(SCENE.joint_names)} DOFs for {args.robot}, found {robot.num_dofs}")
-        if not args.scene_only:
-            controller = RobotController(robot, model, simulation_app, SCENE, args.output_dir,
-                                         world_from_base=world_from_base)
-            if panel:
-                controller.progress_callback = panel.set_status
-            controller.initialize_home()
+        controller = RobotController(robot, model, simulation_app, SCENE, args.output_dir,
+                                     world_from_base=world_from_base)
+        if panel:
+            controller.progress_callback = panel.set_status
+        controller.initialize_home()
         preview_path = args.output_dir / "body_rgb.png"
         image_rgb, depth_m = save_rgbd_frame(sensor, simulation_app, args.output_dir)
+        # This workflow captures once. Release the render product before stopping
+        # the timeline, which otherwise resets the still-active RTX sensor.
+        sensor.detach_annotators(sensor.annotators)
+        del sensor
         print(f"Robot profile: {args.robot}")
         print(f"Robot USD: {robot_usd}")
         print(f"Robot DOFs: {robot.num_dofs}")
         print(f"Scene saved: {stage_path}")
         print(f"RGB image saved: {preview_path}")
+        if workpiece_asset:
+            print(f"Reusable workpiece USD: {workpiece_asset}")
 
         if not args.scene_only:
             if panel:
@@ -197,7 +230,8 @@ def main() -> None:
         traceback.print_exc()
         raise
     finally:
-        simulation_app.close(exit_code=int(failed))
+        # PNG/NPY writes above are synchronous; no Replicator writer queue exists.
+        simulation_app.close(wait_for_replicator=False, exit_code=int(failed))
 
 
 if __name__ == "__main__":

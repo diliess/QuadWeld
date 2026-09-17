@@ -16,7 +16,7 @@ if not opened or stage is None:
 for prim_path in (
     "/World/RobotMount/Robot",
     "/World/RobotStand",
-    "/World/Workpiece/SteelPlate",
+    "/World/Workpiece",
     "/World/RobotMount/Sensors/BodyRGBD",
 ):
     if not stage.GetPrimAtPath(prim_path).IsValid():
