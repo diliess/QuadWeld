@@ -1,0 +1,24 @@
+# Run from the QuadWeld repository root after activating the sam3 Conda environment.
+--extra-index-url https://download.pytorch.org/whl/cu128
+torch==2.10.0+cu128
+torchvision==0.25.0+cu128
+# This SAM 3 checkout imports pkg_resources, removed in newer setuptools.
+setuptools==80.9.0
+numpy==1.26.4
+# Keep OpenCV compatible with SAM 3's NumPy < 2 requirement.
+opencv-python==4.11.0.86
+scipy
+psutil
+einops
+pycocotools
+scikit-image
+scikit-learn
+matplotlib
+jupyterlab
+notebook
+ipywidgets
+ipycanvas
+ipympl
+# Install image-notebook dependencies explicitly: upstream's notebooks extra
+# also pulls decord 0.6.0, whose wheel metadata incorrectly declares CPython 3.6.
+-e ./thirdparty/sam3

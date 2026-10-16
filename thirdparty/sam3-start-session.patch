@@ -1,0 +1,15 @@
+diff --git a/sam3/model/sam3_base_predictor.py b/sam3/model/sam3_base_predictor.py
+--- a/sam3/model/sam3_base_predictor.py
++++ b/sam3/model/sam3_base_predictor.py
+@@ -133,4 +133,11 @@ class Sam3BasePredictor:
+             init_kwargs["async_loading_frames"] = self.async_loading_frames
+         if hasattr(self, "video_loader_type"):
+             init_kwargs["video_loader_type"] = self.video_loader_type
++
++        # Pass only arguments supported by this model's init_state method.
++        import inspect
++
++        valid_params = set(inspect.signature(self.model.init_state).parameters)
++        init_kwargs = {k: v for k, v in init_kwargs.items() if k in valid_params}
++
+         inference_state = self.model.init_state(**init_kwargs)
