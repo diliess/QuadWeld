@@ -6,7 +6,7 @@ from isaacsim.core.experimental.utils import stage as stage_utils
 from isaacsim.core.rendering_manager import ViewportManager
 
 
-scene_path = Path(__file__).resolve().parent / "outputs" / "quadweld_scene.usda"
+scene_path = Path(__file__).resolve().parent / "outputs" / "runs" / "default" / "quadweld_scene.usda"
 if not scene_path.is_file():
     raise FileNotFoundError(f"Generate the scene first: {scene_path}")
 

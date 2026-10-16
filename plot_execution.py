@@ -11,7 +11,7 @@ import numpy as np
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--output-dir", type=Path, default=Path(__file__).resolve().parent / "outputs")
+    parser.add_argument("--output-dir", type=Path, default=Path(__file__).resolve().parent / "outputs" / "runs" / "default")
     args = parser.parse_args()
     records = np.genfromtxt(args.output_dir / "tcp_execution.csv", delimiter=",", names=True,
                             dtype=None, encoding="utf-8")

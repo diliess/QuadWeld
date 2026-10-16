@@ -14,7 +14,7 @@ def main():
     parser.add_argument("--rgb", type=Path, required=True)
     parser.add_argument("--depth", type=Path, required=True, help="Registered Z depth: .npy or single-channel PNG")
     parser.add_argument("--calibration", type=Path, required=True)
-    parser.add_argument("--output-dir", type=Path, default=Path("outputs/rgbd_offline"))
+    parser.add_argument("--output-dir", type=Path, default=Path("outputs/offline/rgbd_offline"))
     parser.add_argument("--spacing", type=float, default=0.01)
     parser.add_argument("--clearance", type=float, default=0.01)
     parser.add_argument("--path-mode", choices=("auto", "closed", "open"), default="auto")

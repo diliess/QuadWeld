@@ -37,6 +37,17 @@ git -C thirdparty/sam3 checkout --detach 660a5e9e1b8b4c02c0ad97229b88a09a6e4ff5b
 git -C thirdparty/sam3 apply ../sam3-start-session.patch
 ```
 
+另一个本地修复涉及纯点提示：首次创建对象时，`_build_sam2_output()` 因当前帧
+尚无缓存而提前返回空结果，丢弃了模型已经生成的掩码。修复后从空缓存开始合并
+新掩码。上游 [Issue #555](https://github.com/facebookresearch/sam3/issues/555)
+报告了类似空输出现象；这里的修改来自本地定位，可通过以下补丁恢复：
+
+```bash
+git -C thirdparty/sam3 apply ../sam3-point-prompt.patch
+```
+
+该修复在独立 SAM3 仓库中的本地提交为 `6e45d92`；主项目保存上述补丁。
+
 安装及权重获取方式见上游 [README](sam3/README.md)。
 
 ## SAM 3 Conda 环境
@@ -78,7 +89,7 @@ CUDA_VISIBLE_DEVICES=0 python scripts/check_sam3_env.py
 
 ```bash
 CUDA_VISIBLE_DEVICES=0 python scripts/check_sam3_env.py --forward-smoke \
-  --report outputs/sam3_env_check.json
+  --report outputs/diagnostics/sam3/sam3_env_check.json
 ```
 
 `--forward-smoke` 使用随机初始化权重，仅检查运行环境，不下载预训练权重，也不评估分割效果。
@@ -87,7 +98,7 @@ GPU 编号可按 `nvidia-smi` 显示的空闲情况修改。
 2026-09-18 在本机 RTX 3090 上完成验证：`pip check` 无依赖错误，CUDA 矩阵运算、
 torchvision CUDA NMS，以及 SAM 3 图像编码、点提示和文字提示前向计算均通过。
 点提示输出形状为 `3 × 480 × 640`，本次检查峰值 GPU 内存约 5.22 GiB；
-记录见 [环境验证报告](../outputs/sam3_env_check.json)。本次未加载预训练权重。
+记录见 [环境验证报告](../outputs/diagnostics/sam3/sam3_env_check.json)。本次未加载预训练权重。
 
 ## 模型权重
 

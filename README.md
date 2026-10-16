@@ -12,10 +12,10 @@
 
 ```bash
 # 2×2 方板，真实 3 mm 间隙；连接后可直接查看
-python main.py --workpiece plate-grid --webrtc --auto-start --gpu 1 --output-dir outputs/plate_grid
+python main.py --workpiece plate-grid --webrtc --auto-start --gpu 1 --output-dir outputs/runs/plate_grid
 
 # 开口盒子，观察底板与侧壁的交接处
-python main.py --workpiece open-box --webrtc --auto-start --gpu 1 --output-dir outputs/open_box
+python main.py --workpiece open-box --webrtc --auto-start --gpu 1 --output-dir outputs/runs/open_box
 ```
 
 也支持 `--robot rm65`。去掉 `--auto-start` 后，在串流面板点击 **Capture RGB-D** 或在终端按回车，才初始化机械臂并采集图像。使用本地图形界面时去掉 `--webrtc`；只生成、拍照并退出时将其替换为 `--headless`。
@@ -33,7 +33,7 @@ python main.py --workpiece open-box --webrtc --auto-start --gpu 1 --output-dir o
 
 ```bash
 python main.py --workpiece plate-grid --grid-count 3 --tile-size 0.14 --seam-gap 0.004 \
-  --headless --gpu 1 --output-dir outputs/plate_grid_3x3
+  --headless --gpu 1 --output-dir outputs/runs/plate_grid_3x3
 ```
 
 默认拼板外尺寸为 `0.403 × 0.403 m`，盒子外尺寸为 `0.40 × 0.40 × 0.126 m`（包含底板厚度）。每块板具有独立静态碰撞体，盒内空腔保留。拼板下方有支撑垫，间隙不是用黑色几何条填出来的；缝中深度可能来自下面的支架。材质为简单金属材质，并增加斜上方区域光。这些是理想几何工件，尚未加入锈蚀、坡口、焊道或加工纹理。
@@ -42,7 +42,7 @@ python main.py --workpiece plate-grid --grid-count 3 --tile-size 0.14 --seam-gap
 
 两份默认资产也保存在 [assets/workpieces/](assets/workpieces/README.md)，可直接导入其他 Isaac Sim 场景。资产使用米、Z 向上，默认根节点为 `/Workpiece`；原点为拼板上表面中心或盒内底面中心。独立资产不含相机、灯光和底座，不依赖外部贴图。建模尺寸仅供场景生成使用，没有传给感知或轨迹生成器。
 
-本次验证通过 27 项 CPU 测试，并在 Isaac Sim 6 / RTX 3090 上生成两种工件的 RGB-D。拼板同时验证了 WebRTC 服务与预览面板启动，盒子验证了无界面采集，均正常退出；客户端实际视频接收仍取决于网络连接。原矩形场景回归通过 106 个路径采样点、179 个运动目标的视觉与 IK 预检查，本次未重复沿线执行。预览图片见 [拼板](outputs/plate_grid/body_rgb.png) 和 [盒子](outputs/open_box/body_rgb.png)。
+本次验证通过 27 项 CPU 测试，并在 Isaac Sim 6 / RTX 3090 上生成两种工件的 RGB-D。拼板同时验证了 WebRTC 服务与预览面板启动，盒子验证了无界面采集，均正常退出；客户端实际视频接收仍取决于网络连接。原矩形场景回归通过 106 个路径采样点、179 个运动目标的视觉与 IK 预检查，本次未重复沿线执行。预览图片见 [拼板](outputs/runs/plate_grid/body_rgb.png) 和 [盒子](outputs/runs/open_box/body_rgb.png)。
 
 ## 场景参数
 
@@ -87,16 +87,16 @@ python main.py
 
 ```bash
 # RM65：无界面执行完整任务
-python main.py --robot rm65 --headless --gpu 4 --output-dir outputs/rm65
+python main.py --robot rm65 --headless --gpu 4 --output-dir outputs/runs/rm65
 
 # RM65：通过 Windows WebRTC 观看，连接后点击 Start task
-python main.py --robot rm65 --webrtc --gpu 4 --output-dir outputs/rm65
+python main.py --robot rm65 --webrtc --gpu 4 --output-dir outputs/runs/rm65
 
 # 切回 UR5e
-python main.py --robot ur5e --webrtc --gpu 4 --output-dir outputs/ur5e
+python main.py --robot ur5e --webrtc --gpu 4 --output-dir outputs/runs/ur5e
 ```
 
-串流命令每次只运行一个实例。机器人在启动时选择，切换需要退出当前进程后重新启动。`--plan-only`、`--demo-open` 和 `--path-mode` 对两种机器人均适用。RM65 开放 U 形路径也已通过视觉与 IK 预检查（42 个路径采样点、103 个运动目标），结果见 `outputs/rm65_open_validation/`。
+串流命令每次只运行一个实例。机器人在启动时选择，切换需要退出当前进程后重新启动。`--plan-only`、`--demo-open` 和 `--path-mode` 对两种机器人均适用。RM65 开放 U 形路径也已通过视觉与 IK 预检查（42 个路径采样点、103 个运动目标），结果见 `outputs/runs/rm65_open_validation/`。
 
 | 配置 | UR5e | RM65-6F |
 | --- | --- | --- |
@@ -165,14 +165,14 @@ python main.py --webrtc --gpu 4 --public-ip 192.168.1.100
 ```bash
 conda activate quadweld
 cd /data/huangliqi/QuadWeld
-mkdir -p outputs/webrtc
-cd outputs/webrtc
+mkdir -p outputs/streaming/webrtc
+cd outputs/streaming/webrtc
 isaacsim isaacsim.exp.full.streaming --no-window \
   --/exts/omni.kit.livestream.app/primaryStream/enableEventTracing=false \
   --exec /data/huangliqi/QuadWeld/stream_scene.py
 ```
 
-串流启动后连接运行机器的 IP，默认信令端口为 `49100`、视频端口为 `47998`。`stream_scene.py` 会打开刚生成的 USD 并把界面视角对准机械臂与钢板；机身 RGB-D 相机保存在场景中。默认启用的串流事件追踪会生成占空间的 `NvStreamer-*.etli` 文件；上面的命令关闭追踪，并将其他运行文件集中在 `outputs/webrtc/`。
+串流启动后连接运行机器的 IP，默认信令端口为 `49100`、视频端口为 `47998`。`stream_scene.py` 会打开 `outputs/runs/default/quadweld_scene.usda` 并把界面视角对准机械臂与钢板；机身 RGB-D 相机保存在场景中。默认启用的串流事件追踪会生成占空间的 `NvStreamer-*.etli` 文件；上面的命令关闭追踪，并将其他运行文件集中在 `outputs/streaming/webrtc/`。
 
 若默认 Isaac Sim 资产根目录不可访问，先取得完整的 UR5e USD 资产及其依赖，再指定主 USD 文件：
 
@@ -180,9 +180,13 @@ isaacsim isaacsim.exp.full.streaming --no-window \
 python main.py --headless --robot-usd /absolute/path/to/ur5e.usd
 ```
 
-成功后生成的文件如下。USD 仍引用所选机器人的资产；复制到其他机器时需保证资产及其依赖可访问。
+`outputs/` 按用途保存：`runs/` 为每次仿真运行与验证（默认运行写入 `runs/default/`），
+`offline/` 为离线 RGB-D 处理与 SAM3 分割实验，`diagnostics/sam3/` 为 SAM3 环境报告，
+`streaming/webrtc/` 为独立串流日志与追踪文件。每次运行的图像、轨迹、场景和报告保存在同一个运行目录。
 
-| 文件（`outputs/` 下） | 内容 |
+成功后在运行目录生成的文件如下。USD 仍引用所选机器人的资产；复制到其他机器时需保证资产及其依赖可访问。
+
+| 文件（默认在 `outputs/runs/default/` 下） | 内容 |
 | --- | --- |
 | `body_rgb.png` | 在 home 姿态采集的机身 RGB，未加入调试线 |
 | `body_depth_m.npy`、`body_depth_preview.png` | 对齐的光轴 Z 深度（米）和仅供查看的灰度预览 |
@@ -207,16 +211,48 @@ USD 保存的是场景及轨迹可视化，不包含 Python 控制器；打开 U
 python plot_execution.py
 ```
 
+## SAM3 分割实验
+
+原图统一放在 [assets/weld_images/](assets/weld_images/)，共 12 张，来源见该目录的
+`sources.csv`，点提示见 `point_prompts.csv`。全部分割实验集中在
+[outputs/offline/sam3/](outputs/offline/sam3/)：
+
+| 文件或目录 | 内容 |
+| --- | --- |
+| `overview.jpg`、`results.csv` | 每张原图一个代表结果，共 12 张，含人工核对说明 |
+| `text_comparison.jpg`、`point_comparison.jpg` | 近正面图片的文字提示和三种点提示对照 |
+| `masks/`、`overlays/` | 代表结果的原尺寸二值掩码和叠加图，与原图同名 |
+| `trials.csv` | 80 次历史推理的统一索引；9 次接口修复前的点提示标为无效评估记录 |
+| `history.zip` | 整理前全部原图、实验文件和日志，保留原路径及 SHA-256 迁移记录 |
+
+`trials.csv` 中的 `archive` 指向历史压缩包，`mask_member`、`overlay_member` 和
+`report_member` 是包内路径。`results.csv` 中的图像、掩码和叠加图路径可直接访问。
+点提示的对象得分由接口固定为 1.0，不代表分割置信度。
+
+当前结果：部分已有焊道可用文字或点提示分割；两张待焊主交线图片的文字提示未检出目标，
+点提示主要覆盖板件区域，尚未得到正确交界线窄带掩码。
+SAM3 环境、权重和本地接口补丁见 [thirdparty/README.md](thirdparty/README.md)。
+
+在 `sam3` Conda 环境中运行新实验：
+
+```bash
+python scripts/segment_weld_images.py --prompt 'weld seam' --threshold 0.1
+python scripts/segment_weld_images.py --points-csv assets/weld_images/point_prompts.csv
+```
+
+默认结果仍写入 `outputs/offline/sam3/`：新实验表与对照图为 `latest.csv`、`latest.jpg`，
+掩码和叠加图的文件名包含提示词或点方案及文字检测阈值，多提示词共用上述两个图像目录。
+
 ## 算法与坐标约定
 
 不启动 Isaac Sim，也可以在 CPU 上从文件生成同样的粗轨迹：
 
 ```bash
 python generate_rgbd_trajectory.py \
-  --rgb outputs/body_rgb.png \
-  --depth outputs/body_depth_m.npy \
-  --calibration outputs/rgbd_calibration.json \
-  --output-dir outputs/rgbd_offline
+  --rgb outputs/runs/default/body_rgb.png \
+  --depth outputs/runs/default/body_depth_m.npy \
+  --calibration outputs/runs/default/rgbd_calibration.json \
+  --output-dir outputs/offline/rgbd_offline
 ```
 
 实机输入为 RGB、对齐到该 RGB 图像坐标的深度 `.npy` 或单通道 PNG，以及标定 JSON。深度必须是光轴 Z 距离，不能是到光心的径向距离。米制浮点深度使用 `depth_scale_to_m=1`，毫米制 uint16 使用 `0.001`；预览 PNG 不能用于规划。内参必须匹配当前分辨率和畸变/校正状态。实机数据需要先由设备 SDK 完成 RGB/深度配准；此脚本不接入相机驱动。
@@ -247,9 +283,9 @@ python generate_rgbd_trajectory.py \
 
 CPU 测试覆盖图像平移、深度高度变化、倾斜板面、噪声/缺失/离群点、毫米深度单位、外参变换和无有效观测时拒绝规划，以及原有 IK、控制失败停止、串流开始门控。仿真使用理想渲染深度；单元测试加入了合成噪声，尚未验证真实 RGB-D 在反光金属上的数据质量。执行报告的跟踪误差是相对视觉生成路径的控制误差；离板间隙也是相对估计平面，不代表真实工件测量精度。
 
-本机 RGB-D 版本已通过 20 项 CPU 测试，并在 Isaac Sim 6 / RTX 3090（`--gpu 4`）完成闭合路径的 179 个运动目标、5,774 个执行采样，走圈后成功抬起。走圈相对视觉路径的 RMS 跟踪误差约 0.53 mm，最大约 0.84 mm；相对估计板面的间隙为 9.18–9.76 mm。验证结果在 `outputs/rgbd_validation/`。开放 U 形测试场景也完成了 147 个运动目标；走线最大偏差约 0.77 mm，并在终点抬到估计板面上方约 99.1 mm，结果在 `outputs/open_execution/`。
+本机 RGB-D 版本已通过 20 项 CPU 测试，并在 Isaac Sim 6 / RTX 3090（`--gpu 4`）完成闭合路径的 179 个运动目标、5,774 个执行采样，走圈后成功抬起。走圈相对视觉路径的 RMS 跟踪误差约 0.53 mm，最大约 0.84 mm；相对估计板面的间隙为 9.18–9.76 mm。验证结果在 `outputs/runs/rgbd_validation/`。开放 U 形测试场景也完成了 147 个运动目标；走线最大偏差约 0.77 mm，并在终点抬到估计板面上方约 99.1 mm，结果在 `outputs/runs/open_execution/`。
 
-机械臂切换版本通过 22 项 CPU 测试，其中 RM65 的 USD 运动学与厂商 URDF 在三个关节姿态下独立对照（该项需要本地厂商源文件及 USD Python 绑定）。RM65 已在同一 GPU 完成 128 个运动目标、4,192 个执行采样，沿线 RMS 跟踪误差约 0.96 mm、最大约 1.49 mm，随后成功抬起；结果见 `outputs/rm65_validation/`。UR5e 回归完成 179 个目标，沿线 RMS 约 0.53 mm，结果见 `outputs/ur5e_switch_validation/`。这些误差均相对于视觉参考轨迹。
+机械臂切换版本通过 22 项 CPU 测试，其中 RM65 的 USD 运动学与厂商 URDF 在三个关节姿态下独立对照（该项需要本地厂商源文件及 USD Python 绑定）。RM65 已在同一 GPU 完成 128 个运动目标、4,192 个执行采样，沿线 RMS 跟踪误差约 0.96 mm、最大约 1.49 mm，随后成功抬起；结果见 `outputs/runs/rm65_validation/`。UR5e 回归完成 179 个目标，沿线 RMS 约 0.53 mm，结果见 `outputs/runs/ur5e_switch_validation/`。这些误差均相对于视觉参考轨迹。
 
 若图片没有钢板，检查机身相机视野、机械臂遮挡及裁剪范围。若默认资产加载失败，检查 Isaac Sim 资产根目录或使用 `--robot-usd`。若报 `No device could be created`、`NVML_ERROR_DRIVER_NOT_LOADED`，需要在能访问 NVIDIA 驱动和 GPU 的环境运行；无界面模式同样需要 GPU 渲染 RGB-D。离线生成器不需要 GPU。
 

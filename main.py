@@ -37,7 +37,7 @@ def parse_args(argv=None) -> argparse.Namespace:
     parser.add_argument("--calibration", type=Path,
                         help="Override the selected robot's RGB-D installation calibration")
     parser.add_argument(
-        "--output-dir", type=Path, default=Path(__file__).resolve().parent / "outputs", help="Saved USD and RGB preview directory"
+        "--output-dir", type=Path, default=Path(__file__).resolve().parent / "outputs" / "runs" / "default", help="Saved USD and RGB preview directory"
     )
     args = parser.parse_args(argv)
     if not all(1 <= port <= 65535 for port in (args.signal_port, args.stream_port)):
