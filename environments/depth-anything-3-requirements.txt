@@ -1,0 +1,12 @@
+# Run from the QuadWeld repository root in the depth-anything-3 environment.
+--extra-index-url https://download.pytorch.org/whl/cu128
+torch==2.10.0+cu128
+torchvision==0.25.0+cu128
+xformers==0.0.34
+numpy==1.26.4
+opencv-python==4.11.0.86
+# Upstream pins MoviePy 1.x, which imports pkg_resources.
+setuptools==80.9.0
+# Required by DA3's model/output code but absent from upstream dependencies.
+addict==2.4.0
+-e ./thirdparty/depth-anything-3

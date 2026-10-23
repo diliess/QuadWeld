@@ -1,0 +1,6 @@
+name: depth-anything-3
+channels:
+  - defaults
+dependencies:
+  - python=3.12
+  - pip
