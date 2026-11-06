@@ -1,0 +1,43 @@
+[project]
+name = "quadweld"
+version = "0.1.0"
+description = "RGB-D weld path perception, planning, and Isaac Sim 6 robot control"
+readme = "README.md"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "matplotlib>=3.8,<4",
+    "numpy>=1.26.4,<3",
+    "opencv-python-headless==4.13.0.90",
+    "pillow>=10.2,<13",
+    "scipy>=1.13,<2",
+]
+
+[project.optional-dependencies]
+sim = [
+    "isaacsim[all,extscache]==6.0.0.1",
+    "torch==2.11.0",
+]
+# Standalone USD bindings for geometry tests without starting Isaac Sim.
+usd = ["usd-core>=25.5,<27"]
+
+[tool.uv]
+package = false
+environments = ["sys_platform == 'linux' and platform_machine == 'x86_64'"]
+# Isaac Sim provides its own USD bindings; do not overlay them with usd-core.
+conflicts = [[{ extra = "sim" }, { extra = "usd" }]]
+
+[tool.uv.sources]
+torch = { index = "pytorch-cu128" }
+
+[[tool.uv.index]]
+name = "pytorch-cu128"
+url = "https://download.pytorch.org/whl/cu128"
+explicit = true
+
+[[tool.uv.index]]
+name = "pypi"
+url = "https://pypi.org/simple"
+
+[[tool.uv.index]]
+name = "nvidia"
+url = "https://pypi.nvidia.com"

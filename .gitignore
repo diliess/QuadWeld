@@ -1,7 +1,8 @@
 __pycache__/
 *.py[cod]
+.venv/
 outputs/
 NvStreamer-*.etli
-assets/vendor/rm_models/
+assets/vendor/
 thirdparty/sam3/
 thirdparty/depth-anything-3/
