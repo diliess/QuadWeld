@@ -83,7 +83,8 @@ def project_intersection(plane_a, plane_b, intrinsics):
 
 
 def surface_normals(depth, intrinsics):
-    smooth_depth = cv2.GaussianBlur(depth, (0, 0), 1.0)
+    # Avoid float32 blur rounding being amplified by depth derivatives.
+    smooth_depth = cv2.GaussianBlur(np.asarray(depth, dtype=np.float64), (0, 0), 1.0)
     points = backproject(smooth_depth, intrinsics)
     dy, dx = np.gradient(points, axis=(0, 1))
     normals = np.cross(dx, dy)

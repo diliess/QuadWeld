@@ -106,6 +106,23 @@ def run_worker(command):
             print(line, flush=True)
 
 
+def calibrated_intrinsics(path, original_hw, processed_hw):
+    """A calibrated camera matrix (calibration/*.json) at DA3's processed resolution."""
+    import numpy as np
+
+    calibration = json.loads(Path(path).read_text())
+    width, height = calibration["image_size"]
+    if [height, width] != [int(v) for v in original_hw]:
+        raise ValueError(f"Calibration image size {width}x{height} differs from the input image")
+    if any(calibration["distortion_coefficients"]):
+        raise ValueError("Undistort the image first; DA3 inputs are treated as pinhole")
+    matrix = np.asarray(calibration["camera_matrix"], dtype=float)
+    sx, sy = processed_hw[1] / width, processed_hw[0] / height
+    # Pixel centres map as (u + 0.5) * s - 0.5, matching to_original().
+    return np.array([[matrix[0, 0] * sx, 0, (matrix[0, 2] + .5) * sx - .5],
+                     [0, matrix[1, 1] * sy, (matrix[1, 2] + .5) * sy - .5], [0, 0, 1]])
+
+
 def to_original(xy, scale):
     import numpy as np
     return (np.asarray(xy) + .5) / scale - .5
@@ -579,15 +596,18 @@ def pipeline(images, args):
                 expected_hash = hashlib.sha256(image.read_bytes()).hexdigest()
                 if str(semantics[f"{index}_image_sha256"]) != expected_hash:
                     raise ValueError("Semantic cache does not match input images and order")
-                with np.load(depth_paths[image], allow_pickle=False) as data:
-                    if not bool(data["is_metric"]):
-                        raise ValueError("Expected metric DA3 output")
-                    result = detect(data["depth_m"], data["intrinsics"], data["processed_rgb"],
-                                    plate_masks=semantics[f"{index}_plate_masks"],
-                                    weld_masks=semantics[f"{index}_weld_masks"],
-                                    weld_scores=semantics[f"{index}_weld_scores"],
-                                    confidence=data["confidence"] if "confidence" in data else None)
-                    output, report, panel = serialize_result(index, image, data, result, args.joint_band_width)
+                with np.load(depth_paths[image], allow_pickle=False) as stored:
+                    data = dict(stored)
+                if not bool(data["is_metric"]):
+                    raise ValueError("Expected metric DA3 output")
+                if args.intrinsics:
+                    data["intrinsics"] = calibrated_intrinsics(args.intrinsics, data["original_hw"], data["depth_m"].shape)
+                result = detect(data["depth_m"], data["intrinsics"], data["processed_rgb"],
+                                plate_masks=semantics[f"{index}_plate_masks"],
+                                weld_masks=semantics[f"{index}_weld_masks"],
+                                weld_scores=semantics[f"{index}_weld_scores"],
+                                confidence=data["confidence"] if "confidence" in data else None)
+                output, report, panel = serialize_result(index, image, data, result, args.joint_band_width)
                 arrays.update(output)
                 for key in ("plate_masks", "plate_scores", "weld_masks", "weld_scores"):
                     arrays[f"image_{index:03d}_sam_{key}"] = semantics[f"{index}_{key}"]
@@ -601,6 +621,7 @@ def pipeline(images, args):
                    "pipeline": "SAM-interior planes + per-joint interval states + analytic 3D roots or paired 3D toes",
                    "human_region_or_point_inputs": False, "human_weld_state_input": False,
                    "semantics": metadata, "seconds": round(time.monotonic() - started, 2),
+                   "intrinsics_source": f"calibrated: {args.intrinsics}" if args.intrinsics else "DA3 estimate",
                    "depth_cache_hits": len(images) - len(missing), "semantic_cache_reused": semantics_valid,
                    "detector_source_sha256": hashlib.sha256((ROOT / "vision/weld_detector.py").read_bytes()).hexdigest(),
                    "toe_source_sha256": hashlib.sha256((ROOT / "vision/weld_toes.py").read_bytes()).hexdigest(),
@@ -643,6 +664,8 @@ def main():
     parser.add_argument("--joint-band-width", type=int, default=5, help="Rasterized joint-line width in original pixels")
     parser.add_argument("--reuse-depth-dir", type=Path, help="Reuse only depth files with matching input SHA256")
     parser.add_argument("--model-cache-dir", type=Path, help="Optional model-output cache; inputs are verified by SHA256")
+    parser.add_argument("--intrinsics", type=Path,
+                        help="Calibrated pinhole camera JSON (calibration/*.json) replacing DA3's estimated intrinsics")
     parser.add_argument("--reuse-semantics", type=Path, help=argparse.SUPPRESS)
     parser.add_argument("--semantic-worker", type=Path, help=argparse.SUPPRESS)
     args = parser.parse_args()

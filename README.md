@@ -6,9 +6,9 @@
 
 现在可直接在 Isaac Sim 中创建两种工件：`--workpiece plate-grid` 为多个独立方板组成的拼板，`--workpiece open-box` 为底板和四面侧壁组成的开口盒子。省略参数时仍使用原来的 `outline` 黑色轮廓示例。
 
-新工件自动进入**场景预览与 RGB-D 采集模式**：机械臂初始化到拍照用的 home 姿态，随后保持，不执行焊缝识别或沿线运动。当前检测器不支持拼板的交叉分支，单平面规划器也未处理盒壁；因此新工件不能与 `--plan-only` 或 `--demo-open` 一起使用。
+新工件默认进入**场景预览与 RGB-D 采集模式**：机械臂初始化到拍照用的 home 姿态，随后保持，不执行焊缝识别或沿线运动。默认的单平面轮廓规划器不处理拼板交叉分支和盒壁，因此预览模式不接受 `--plan-only`。指定 `--seam-source auto-weld` 后可使用角焊缝规划流程，并可加 `--plan-only` 只规划；`--demo-open` 仅用于原来的 `outline` 示例。
 
-进入 `quadweld` 环境后，通过 Windows WebRTC 客户端观看（两条命令分别运行，切换前退出上一实例；GPU 编号按本机空闲情况调整）：
+安装 `sim` 可选依赖并激活 `.venv` 后，通过 Windows WebRTC 客户端观看（两条命令分别运行，切换前退出上一实例；GPU 编号按本机空闲情况调整）：
 
 ```bash
 # 2×2 方板，真实 3 mm 间隙；连接后可直接查看
@@ -40,9 +40,35 @@ python main.py --workpiece plate-grid --grid-count 3 --tile-size 0.14 --seam-gap
 
 每次运行保存 `workpiece.usda`（独立、可复用的工件）、`quadweld_scene.usda`（包含机器人与相机的完整场景）、`body_rgb.png`、`body_depth_m.npy` 和 `body_depth_preview.png`。配置保存在 `robot_config.json` 的 `workpiece` 字段中。`execution_report.json` 的 `status=scene_only` 表示预览，不代表完成焊接任务。
 
-两份默认资产也保存在 [assets/workpieces/](assets/workpieces/README.md)，可直接导入其他 Isaac Sim 场景。资产使用米、Z 向上，默认根节点为 `/Workpiece`；原点为拼板上表面中心或盒内底面中心。独立资产不含相机、灯光和底座，不依赖外部贴图。建模尺寸仅供场景生成使用，没有传给感知或轨迹生成器。
+两份默认资产也作为场景包保存在 [assets/scenes/](assets/scenes/README.md) 的 `plate-grid/` 和 `open-box/`，可直接导入其他 Isaac Sim 场景。资产使用米、Z 向上，默认根节点为 `/Workpiece`；原点为拼板上表面中心或盒内底面中心。独立资产不含相机、灯光和底座，不依赖外部贴图。建模尺寸仅供场景生成使用，没有传给感知或轨迹生成器。
 
 本次验证通过 27 项 CPU 测试，并在 Isaac Sim 6 / RTX 3090 上生成两种工件的 RGB-D。拼板同时验证了 WebRTC 服务与预览面板启动，盒子验证了无界面采集，均正常退出；客户端实际视频接收仍取决于网络连接。原矩形场景回归通过 106 个路径采样点、179 个运动目标的视觉与 IK 预检查，本次未重复沿线执行。预览图片见 [拼板](outputs/runs/plate_grid/body_rgb.png) 和 [盒子](outputs/runs/open_box/body_rgb.png)。
+
+## 导入 RoboSimStudio 船板格架
+
+[独立环境资产](assets/scenes/ship-grid/README.md) 已从实时场景导出，包含 3×3 个净空
+2×2 m 的格子、连续底板和 T 形肋条，以及静态箱形碰撞和相对路径贴图。资产根节点为
+`/ShipGrid`，米制、Z 向上，原点为中央格中心的底板上表面；不包含 B2、Z1 或其他机器人。
+
+使用现有机器人配置预览：
+
+```bash
+python main.py --robot rm65 --environment-usd assets/scenes/ship-grid/ship_grid.usda \
+  --webrtc --auto-start --gpu 0 --output-dir outputs/runs/ship_grid
+```
+
+无界面采集时将 `--webrtc --auto-start` 替换为 `--headless`。该选项替换示例地面和工件，
+自动进入 `scene_only`，保留所选机器人的安装、相机和控制配置；不会调用单平面轮廓规划器。
+加 `--seam-source auto-weld` 时改为识别并焊接格架角焊缝，见 [船板格架角焊](#船板格架角焊b2-前置-rgb-相机--auto_weld)。
+现有 UR5e/RM65 演示仍是固定安装的机械臂，不会因此变成移动操作机器人。
+运行输出的 `robot_config.json` 记录 `loaded_environment_usd`，完整场景引用这份独立资产。
+
+接入另一套机器狗与机械臂时，在其创建场景的代码中调用
+`scene.environment.add_environment(stage, asset_path)` 即可，详见资产目录中的代码示例。
+无需导入 RoboSimStudio，也无需改变焊缝识别算法的输入。格架元数据不传给感知或规划。
+
+USD 几何、碰撞、贴图依赖和 CPU 组合加载已通过检查。B2 在此环境中的 Isaac Sim 6
+运行记录及定位误差见下文[船板格架角焊](#船板格架角焊b2-前置-rgb-相机--auto_weld)。
 
 ## 场景参数
 
@@ -59,31 +85,53 @@ python main.py --workpiece plate-grid --grid-count 3 --tile-size 0.14 --seam-gap
 | 路径 | 间距不超过 `0.01`；接近与抬起高度为钢板上方 `0.10` |
 | 速度上限 | TCP 插值时间按 `0.04 m/s` 设置；关节 `0.5 rad/s`、`1.0 rad/s²` |
 
-相机 prim 为 `/World/RobotMount/Sensors/BodyRGBD`，与机械臂共享安装座，模拟将来的机身安装关系；目前没有四足模型。上述工件参数仅用于生成测试场景。相机安装变换来自独立标定文件，仿真按该文件放置传感器，算法也以该文件作为输入。实机需要测量相机内参和相机到机械臂基座的外参，不能直接沿用示例数值。机身整体位置无需已知，只要相机与机械臂基座保持刚性连接，外参就不随狗的整体移动改变；但本版要求采集到执行结束期间相对工件保持静止。
+UR5e/RM65 的相机 prim 为 `/World/RobotMount/Sensors/BodyRGBD`，与机械臂共享安装座；B2 配置将相机挂在机械臂基座刚体下，随站立机身运动。上述工件参数仅用于生成测试场景。相机安装变换来自独立标定文件，仿真按该文件放置传感器，算法也以该文件作为输入。实机需要测量相机内参和相机到机械臂基座的外参，不能直接沿用示例数值。机身整体位置无需已知，只要相机与机械臂基座保持刚性连接，外参就不随狗的整体移动改变；本版要求采集到执行结束期间保持站位，不支持行走中作业。
 
 ## 运行
 
-需要支持 RTX 光线追踪的 NVIDIA GPU、可用驱动，以及 **Isaac Sim 6.0**。本机使用全小写的 `quadweld` Conda 环境（Python 3.12）。首次安装可按 [NVIDIA 的 Python 环境说明](https://docs.isaacsim.omniverse.nvidia.com/6.0.0/installation/install_python.html) 执行：
+项目现在使用 **uv + Python 3.12** 管理环境，依赖版本记录在 `uv.lock`。
+当前锁文件面向 Linux x86_64；在项目根目录执行以下命令即可创建 `.venv` 并安装离线算法与绘图依赖：
 
 ```bash
-conda create -n quadweld python=3.12 pip -y
-conda activate quadweld
-python -m pip install --upgrade pip
-python -m pip install torch==2.11.0 --index-url https://download.pytorch.org/whl/cu128
-python -m pip install 'isaacsim[all,extscache]==6.0.0.1' --extra-index-url https://pypi.nvidia.com
+uv sync --locked
+uv run --locked python generate_rgbd_trajectory.py --help
+uv run --locked python -m unittest discover -s tests -v
 ```
 
-进入项目目录后，有界面运行：
+运行仿真需要支持 RTX 光线追踪的 NVIDIA GPU、可用驱动，以及 **Isaac Sim 6.0**。
+`sim` 可选依赖按 [NVIDIA 的 Python 环境说明](https://docs.isaacsim.omniverse.nvidia.com/6.0.0/installation/install_python.html)
+固定 Isaac Sim 6.0.0.1 和 PyTorch 2.11.0（CUDA 12.8），包含扩展缓存；首次下载需要较多时间和磁盘空间。
+安装并运行：
 
 ```bash
-conda activate quadweld
-cd /data/huangliqi/QuadWeld
+uv sync --locked --extra sim
+uv run --locked --extra sim python main.py
+```
+
+也可以激活环境后直接使用下文的 `python` 命令：
+
+```bash
+source .venv/bin/activate
 python main.py
 ```
 
+激活后直接使用 `python`，或在 `uv run` 时始终带上 `--extra sim`；普通的 `uv sync`
+会将环境同步回基础依赖。无需启动仿真即可测试 USD 几何的独立 CPU 环境可使用：
+
+```bash
+uv sync --locked --extra usd
+uv run --locked --extra usd python -m unittest discover -s tests -v
+```
+
+`usd` 与 `sim` 互斥，避免独立 `usd-core` 覆盖 Isaac Sim 的 USD 绑定。
+SAM3、Depth Anything 3 的 NumPy/PyTorch 版本与仿真不同，仍按
+[独立环境说明](thirdparty/README.md) 安装，不合并到 `.venv`。
+下文仿真命令均从项目根目录执行。
+
 ### 切换机械臂
 
-通过 `--robot ur5e|rm65` 选择机器人，省略时使用 UR5e。两者共用 RGB-D 感知、轨迹生成和控制流程：
+通过 `--robot ur5e|rm65|b2_e10l` 选择机器人，省略时使用 UR5e。三者共用 RGB-D 感知、轨迹生成和控制流程；
+`b2_e10l` 为背负焊接臂的四足机器人，见[下文](#b2-背负-e10-l-焊枪)：
 
 ```bash
 # RM65：无界面执行完整任务
@@ -111,13 +159,87 @@ RM65 的安装座更近、更高，测试轮廓更小，以满足当前工具朝
 
 RM65 暂以 `link_6` 原点作为工具安装原点，沿其 +Z 添加 120 mm 简化工具。实际工具需校准 `flange_translation`、`flange_quaternion_wxyz` 和 `tool_length_m`；示例相机外参也需替换为实测标定。
 
-`--robot-usd /path/to/model.usda` 只覆盖所选机器人的资产路径，不自动识别机型；RM65 应同时指定 `--robot rm65`。`--calibration /path/to/calibration.json` 可覆盖该机器人的默认相机标定。RM65 资产来源及目录说明见 [assets/README.md](assets/README.md)。
+`--robot-usd /path/to/model.usda` 只覆盖所选机器人的资产路径，不自动识别机型；RM65 应同时指定 `--robot rm65`。`--calibration /path/to/calibration.json` 可覆盖该机器人的默认相机标定。RM65 资产来源及目录说明见 [assets/robots/rm65/README.md](assets/robots/rm65/README.md)。
+
+### B2 背负 E10-L 焊枪
+
+`--robot b2_e10l` 加载宇树 B2，躯干背部正中装有华言 E10L-Pro 六轴臂和 TRM351 焊枪。
+资产、安装尺寸和假设值见 [assets/robots/b2_e10l/README.md](assets/robots/b2_e10l/README.md)。
+
+```bash
+python main.py --robot b2_e10l --headless --gpu 0 --output-dir outputs/runs/b2_e10l
+```
+
+B2 站在示例钢板前方 `(0.45, -1.15)`，面向 +y，12 个腿部关节由位置伺服保持站立，不行走。
+与固定安装的机械臂相比有以下不同：
+
+- 物理步长为 1/200 s。124.5 kg 的整机在默认 60 Hz 下足端接触漂移，站姿逐渐塌陷。
+- 关节初始角和驱动增益在第一个物理步前写入 USD；否则腿部无力，躯干直接压到地面。
+- B2 站稳后躯干下沉约 2.6 cm，因此规划坐标系取站稳后、拍照时的机械臂基座实际位姿，不用摆放位姿。
+- 机械臂运动时，腿部负载变化会让躯干偏移数毫米。控制器每个航点按躯干实时位姿重解 IK，使 TCP 保持在拍照时的坐标上。
+  固定基座时躯干不动，这一步不起作用。
+- 相机固定在机械臂基座上，位于头部上方的支架，外参为 `calibration/b2_e10l_body_rgbd.json`。
+- 焊枪为实际网格，TCP 在焊丝尖端。喷嘴朝下时，腕部位于焊尖后方 0.44 m、上方 0.26 m。
+  站位因此离钢板较远，使腕部越过 B2 头部，关节离限位至少保留 0.45 rad。
+
+已在 Isaac Sim 6（RTX 5090）完成整圈：视觉检出矩形，规划 106 个路径采样点、199 个运动目标。
+执行中 TCP 最大误差 1.9 mm，沿线最大偏差 1.3 mm，离 RGB-D 估计板面 8.8–9.9 mm。
+RM65 回归同样完成整圈（128 个运动目标）。规划没有检查机械臂与 B2 机身的自碰撞；
+站位、home 姿态及示例矩形各起点和方向下的规划动作，经离线采样核对，避开了躯干和激光雷达。机械臂实际重 45 kg，
+加焊枪和转接板约 50 kg，超过 B2 行走时 40 kg 的额定负载，目前只适合站立作业。
+
+### 船板格架角焊：B2 前置 RGB 相机 + auto_weld
+
+B2 站在格架中央格、面向 +x 肋板，用头部前置相机（URDF `f_dc_link`，俯视 45°）只拍一张 RGB 图，
+由 `scripts/auto_weld.py` 找出立板与足板的交角，再用 E10-L 沿交角走一段平角焊（2F）。
+需要先装好 `sam3` 和 `depth-anything-3` 两个环境及权重，见 [第三方说明](thirdparty/README.md)。
+
+```bash
+python main.py --robot b2_e10l --environment-usd assets/scenes/ship-grid/ship_grid.usda \
+  --seam-source auto-weld --robot-pose 0 0 0 --calibration calibration/b2_e10l_front_rgbd.json \
+  --headless --gpu 0 --output-dir outputs/runs/b2_e10l_grid
+python scripts/evaluate_grid_weld.py outputs/runs/b2_e10l_grid   # 仅仿真评估，与格架真值比较
+```
+
+生成带字幕的演示视频时，在上面的命令中加 `--record-demo`。运行时会另外渲染第三视角（1920×1080）和焊枪近景（960×540），
+把 `<output-dir>/demo/` 中的帧（约 1 GB）合成 MP4：
+
+```bash
+python scripts/make_demo_video.py outputs/runs/b2_e10l_grid   # 输出 outputs/runs/b2_e10l_grid/demo.mp4
+```
+
+视频依次包含：片头、站立初始化、前置 RGB 图、DA3 深度与尺度校正、auto_weld 交线、规划、执行（移到起焊点 ×4，
+其余 ×2，右下角为焊枪近景）和真值评估结果卡。ffmpeg 优先使用系统中的，否则使用 `depth-anything-3` 环境自带的
+`imageio_ffmpeg`，也可用 `--ffmpeg` 指定。录制相机不参与感知和控制。
+
+加 `--plan-only` 只识别和规划不执行；`--weld-length` 设置焊段长度（默认 0.4 m，不可达时依次缩短到 3/4、1/2）；
+`--auto-weld-python` 或环境变量 `QUADWELD_DA3_PYTHON` 指定 DA3 环境的 Python，默认 `~/miniconda3/envs/depth-anything-3/bin/python`。
+
+流程：
+
+1. 站稳后拍一张前置 RGB 图，在 DA3 环境的子进程中原样运行 `auto_weld.py`（DA3 深度 → SAM3 语义 → 板面交线）。
+   新增的 `--intrinsics` 用标定内参代替 DA3 估计的内参。
+2. 单目深度的尺度由支撑面确定：四个足端接触点和重力给出甲板平面，与 DA3 拟合的水平面对齐。
+3. 选取"竖直面与下方面相交"的最长有效区间，排除足板与甲板之间的台阶线。焊缝直线取自 DA3，按平角焊与板面平行。
+4. DA3 恢复的板面会倾斜，焊枪姿态改按工艺取 45° 工作角：支撑面加一个过焊缝的竖直面。
+   DA3 观测到的立板顶高决定机械臂能否从立板上方通过。
+5. 搜索焊枪绕喷嘴轴的转角和 IK 分支，检查焊枪凸包与两个面的间隙；
+   先用关节空间运动移到起点后方 0.15 m，再沿直线接近、焊接、退回，执行时按躯干实时位姿补偿。
+
+输出在运行目录：`body_rgb.png`、`auto_weld/`（auto_weld 原有的图和表）、`seam_report.json`（尺度、选中路径、
+DA3 板面倾角和规划参数）、`trajectory.npz`、`tcp_execution.csv`、`execution_report.json`，评估脚本另写
+`grid_evaluation.json`。
+
+2026-10-26 在 RTX 5090 上完成整段 0.4 m 执行，跟踪误差最大 0.87 mm。但 DA3 定位的焊缝在真实交角前方 3.4 cm、
+上方 4.2 cm，焊尖实际离交角约 6.4 cm（设计 1 cm），始终没有接触钢板，等于沿焊缝上方空走。
+交线在图像中只偏约 4 px，误差来自 DA3 在深色立板处的深度比甲板拟合尺度短约 6%，尺度校正无法消除。
+DA3 估计的立板还向后倾约 20°，因此不用它决定焊枪角度。目前仅用 RGB 相机，下一步需要深度相机或触碰寻位校验和修正焊缝位置。
+SAM3 在这张合成图中没有分割出 "metal plate"，`detect()` 退回纯几何模式。
 
 无界面执行完整一圈并退出：
 
 ```bash
-conda activate quadweld
-cd /data/huangliqi/QuadWeld
+source .venv/bin/activate
 python main.py --headless
 ```
 
@@ -136,13 +258,13 @@ python -c "import numpy, scipy, cv2, PIL"
 python -m unittest discover -s tests -v
 ```
 
-若缺少算法依赖，可在相同环境中安装 `numpy scipy opencv-python-headless pillow`。不要在已装另一种 OpenCV Python 包的环境中重复安装多个 OpenCV 变体。
+算法依赖由 uv 统一安装；仿真环境缺少依赖时运行 `uv sync --locked --extra sim`。
+项目与 Isaac Sim 统一使用 `opencv-python-headless`，不要重复安装其他 OpenCV 变体。
 
 在 Windows WebRTC 客户端实时观看完整任务，服务器运行：
 
 ```bash
-conda activate quadweld
-cd /data/huangliqi/QuadWeld
+source .venv/bin/activate
 python main.py --webrtc --gpu 4
 ```
 
@@ -163,13 +285,12 @@ python main.py --webrtc --gpu 4 --public-ip 192.168.1.100
 如果只想打开已经保存的 USD 场景，可使用以下独立串流命令；它不会执行或回放轨迹算法：
 
 ```bash
-conda activate quadweld
-cd /data/huangliqi/QuadWeld
+source .venv/bin/activate
 mkdir -p outputs/streaming/webrtc
 cd outputs/streaming/webrtc
 isaacsim isaacsim.exp.full.streaming --no-window \
   --/exts/omni.kit.livestream.app/primaryStream/enableEventTracing=false \
-  --exec /data/huangliqi/QuadWeld/stream_scene.py
+  --exec ../../../stream_scene.py
 ```
 
 串流启动后连接运行机器的 IP，默认信令端口为 `49100`、视频端口为 `47998`。`stream_scene.py` 会打开 `outputs/runs/default/quadweld_scene.usda` 并把界面视角对准机械臂与钢板；机身 RGB-D 相机保存在场景中。默认启用的串流事件追踪会生成占空间的 `NvStreamer-*.etli` 文件；上面的命令关闭追踪，并将其他运行文件集中在 `outputs/streaming/webrtc/`。

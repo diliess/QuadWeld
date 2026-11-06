@@ -1,5 +1,6 @@
 """Create the robot, selected workpiece, lighting, and body RGB-D camera."""
 
+from dataclasses import replace
 from pathlib import Path
 
 from isaacsim.core.experimental.utils import stage as stage_utils
@@ -8,8 +9,9 @@ from pxr import Gf, UsdGeom, UsdLux
 
 from config import SceneConfig
 from scene.camera import create_body_camera
+from scene.environment import add_environment
 from scene.workpieces import add_workpiece, cuboid as _cuboid, material as _material
-from robot.asset import attach_tool
+from robot.asset import attach_tool, author_joint_state, rigid_body_path
 
 
 def _resolve_robot_usd(config: SceneConfig, robot_usd_override: str | None) -> str:
@@ -35,7 +37,8 @@ def _resolve_robot_usd(config: SceneConfig, robot_usd_override: str | None) -> s
 
 
 def create_scene(config: SceneConfig, robot_usd_override: str | None = None, *, camera_calibration,
-                 open_outline: bool = False, workpiece_asset: Path | None = None):
+                 open_outline: bool = False, workpiece_asset: Path | None = None,
+                 environment_asset: Path | None = None):
     stage = stage_utils.get_current_stage()
     UsdGeom.SetStageUpAxis(stage, UsdGeom.Tokens.z)
     UsdGeom.SetStageMetersPerUnit(stage, 1.0)
@@ -52,10 +55,11 @@ def create_scene(config: SceneConfig, robot_usd_override: str | None = None, *, 
     plate_material = _material(stage, "/World/Looks/SteelPlate", (0.72, 0.76, 0.79))
     line_material = _material(stage, "/World/Looks/Rectangle", (0.008, 0.008, 0.008))
 
-    _cuboid(stage, "/World/Floor", (0.35, -0.15, -0.01), (2.0, 1.9, 0.02), floor_material, collision=True)
+    if environment_asset is None:
+        _cuboid(stage, "/World/Floor", config.floor_center_world, config.floor_size, floor_material, collision=True)
 
     base_x, base_y, base_z = config.robot_base_position_world
-    if base_z > 0.0:
+    if config.robot_stand_size_xy is not None and base_z > 0.0:
         _cuboid(
             stage,
             "/World/RobotStand",
@@ -67,12 +71,25 @@ def create_scene(config: SceneConfig, robot_usd_override: str | None = None, *, 
 
     robot_mount = UsdGeom.Xform.Define(stage, config.robot_mount_prim_path)
     robot_mount.AddTranslateOp().Set(Gf.Vec3d(*config.robot_base_position_world))
+    robot_mount.AddOrientOp().Set(Gf.Quatf(*config.robot_base_quaternion_wxyz))
     robot_usd = _resolve_robot_usd(config, robot_usd_override)
     stage_utils.add_reference_to_stage(usd_path=robot_usd, path=config.robot_prim_path)
     attach_tool(stage, config)
+    author_joint_state(stage, config)
 
-    UsdGeom.Xform.Define(stage, "/World/Workpiece")
-    if config.workpiece.kind == "outline":
+    if environment_asset is not None:
+        if workpiece_asset is not None or config.workpiece.kind != "outline" or open_outline:
+            raise ValueError("An imported environment replaces the demo workpiece")
+        add_environment(stage, environment_asset)
+        # A work light just above the head (mount frame, which sits at the trunk height), below the
+        # raised arm and above the front camera's view; the dome alone leaves vertical steel black.
+        key = UsdLux.RectLight.Define(stage, f"{config.robot_mount_prim_path}/WorkLight")
+        key.CreateIntensityAttr(8000.0)
+        key.CreateWidthAttr(0.4)
+        key.CreateHeightAttr(0.4)
+        key.AddTranslateOp().Set(Gf.Vec3d(0.55, 0.0, 0.15))
+        key.AddRotateXYZOp().Set(Gf.Vec3f(0.0, -38.0, 0.0))  # Emits along -Z: forward, 52 deg down.
+    elif config.workpiece.kind == "outline":
         _create_outline(stage, config, stand_material, plate_material, line_material, open_outline)
     else:
         if workpiece_asset is None:
@@ -86,7 +103,11 @@ def create_scene(config: SceneConfig, robot_usd_override: str | None = None, *, 
         key.AddTranslateOp().Set(Gf.Vec3d(0.05, -0.40, 1.40))
         key.AddRotateXYZOp().Set(Gf.Vec3f(20.0, -25.0, 0.0))
 
-    UsdGeom.Xform.Define(stage, f"{config.robot_mount_prim_path}/Sensors")
+    sensors = f"{config.robot_mount_prim_path}/Sensors"
+    if config.camera_on_base_link:
+        sensors = f"{rigid_body_path(stage, config.robot_prim_path, config.robot_base_frame)}/Sensors"
+        config = replace(config, camera_prim_path=f"{sensors}/BodyRGBD")
+    UsdGeom.Xform.Define(stage, sensors)
     camera = create_body_camera(config, camera_calibration)
     return camera, robot_usd
 

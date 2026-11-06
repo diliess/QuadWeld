@@ -61,29 +61,53 @@ class RobotController:
         self.base_from_world = np.linalg.inv(world_from_base) if world_from_base is not None else np.eye(4)
         self.observed_surface = None
         self.indices = [articulation.dof_names.index(name) for name in model.names]
+        self.hold_indices = [articulation.dof_names.index(name) for name, _ in config.hold_joint_positions]
+        self.base_link = XformPrim(model.base_path)
         self.last_link = XformPrim(model.last_link_path)
+        self.last_command = None
+        self.phase = "start"
+        self.tick_callback = None  # Called after every app frame, e.g. to record a demo.
         self.history = []
         self.trace_reference = None
         self.progress_callback = None
         self.robot.set_dof_gains(stiffnesses=config.drive_stiffness, dampings=config.drive_damping,
                                 dof_indices=self.indices)
         self.robot.set_dof_max_velocities(config.joint_speed_rad_s, dof_indices=self.indices)
+        if self.hold_indices:
+            self.robot.set_dof_gains(stiffnesses=config.hold_stiffness, dampings=config.hold_damping,
+                                    dof_indices=self.hold_indices)
+
+    @property
+    def world_from_base(self):
+        return np.linalg.inv(self.base_from_world)
+
+    @staticmethod
+    def _world_pose(prim):
+        position, quaternion = prim.get_world_poses()
+        pose = np.eye(4)
+        pose[:3, 3] = position.numpy()[0]
+        w, x, y, z = quaternion.numpy()[0]
+        pose[:3, :3] = Rotation.from_quat([x, y, z, w]).as_matrix()
+        return pose
+
+    def body_positions_base(self, paths):
+        """Rigid-body origins in the planning frame, e.g. feet for the support plane."""
+        from isaacsim.core.experimental.prims import XformPrim
+
+        return np.array([(self.base_from_world @ self._world_pose(XformPrim(path)))[:3, 3] for path in paths])
 
     def current_q(self):
         return self.robot.get_dof_positions(dof_indices=self.indices).numpy()[0].astype(float)
 
     def current_pose(self):
-        position, quaternion = self.last_link.get_world_poses()
-        pose = np.eye(4)
-        pose[:3, 3] = position.numpy()[0]
-        w, x, y, z = quaternion.numpy()[0]
-        pose[:3, :3] = Rotation.from_quat([x, y, z, w]).as_matrix()
-        return self.base_from_world @ pose @ self.model.last_link_from_tcp
+        return self.base_from_world @ self._world_pose(self.last_link) @ self.model.last_link_from_tcp
 
     def tick(self):
         if not self.app.is_running():
             raise RuntimeError("Simulation closed before trajectory completion")
         self.app.update()
+        if self.tick_callback is not None:
+            self.tick_callback(self)
 
     def initialize_home(self):
         q = np.array(self.config.home_joint_positions)
@@ -94,17 +118,42 @@ class RobotController:
         self.robot.set_dof_positions(q, dof_indices=self.indices)
         self.robot.set_dof_velocities(np.zeros_like(q), dof_indices=self.indices)
         self.robot.set_dof_position_targets(q, dof_indices=self.indices)
-        for _ in range(60):
+        if self.hold_indices:
+            hold = np.array([angle for _, angle in self.config.hold_joint_positions])
+            self.robot.set_dof_position_targets(hold, dof_indices=self.hold_indices)
+        self.phase = "settle"
+        for _ in range(self.config.settle_steps):
             self.tick()
+        self.capture_base()
         error = pose_error(self.current_pose(), self.model.forward(self.current_q()))
         if np.linalg.norm(error[:3]) > 0.001 or np.linalg.norm(error[3:]) > 0.01:
             raise RuntimeError(f"USD FK / physics frame mismatch: {error.tolist()}")
 
+    def capture_base(self):
+        """Fix the planning frame at the base's current pose; a standing floating base sinks under load."""
+        self.base_from_world = np.linalg.inv(self._world_pose(self.base_link))
+
+    def _base_drift(self):
+        """Live base pose in the planning frame: identity unless the base has moved since capture."""
+        return self.base_from_world @ self._world_pose(self.base_link)
+
+    def _compensated(self, target_pose, target_q):
+        """Joint target that keeps the TCP on the planning-frame pose while a floating base deflects."""
+        drift = self._base_drift()
+        if np.allclose(drift, np.eye(4), atol=1e-4):
+            return target_q
+        return self.model.inverse(np.linalg.inv(drift) @ target_pose, target_q,
+                                  position_tolerance=self.config.ik_position_tolerance_m,
+                                  orientation_tolerance=self.config.ik_orientation_tolerance_rad)
+
     def move_to_pose(self, target_pose, previous_q, target_q, phase):
         cfg = self.config
+        self.phase = phase
+        start_q = previous_q if self.last_command is None else self.last_command
+        goal_q = self._compensated(target_pose, target_q)
         start_pose = self.model.forward(previous_q)
         distance = np.linalg.norm(target_pose[:3, 3] - start_pose[:3, 3])
-        joint_distance = np.max(np.abs(target_q - previous_q))
+        joint_distance = np.max(np.abs(goal_q - start_q))
         # Quintic interpolation stops at each sample/corner. Bounds include its peak derivatives.
         duration = max(0.08, 1.875 * distance / cfg.cartesian_speed_m_s,
                        1.875 * joint_distance / cfg.joint_speed_rad_s,
@@ -113,8 +162,10 @@ class RobotController:
         elapsed, stable_steps, ticks = 0.0, 0, 0
         while elapsed < duration + cfg.waypoint_timeout_s:
             fraction = min(elapsed / duration, 1.0)
+            if fraction >= 1.0 and ticks % 10 == 0:
+                goal_q = self._compensated(target_pose, goal_q)
             blend = fraction ** 3 * (10 - 15 * fraction + 6 * fraction ** 2)
-            command = previous_q + blend * (target_q - previous_q)
+            command = start_q + blend * (goal_q - start_q)
             self.robot.set_dof_position_targets(command, dof_indices=self.indices)
             self.tick()
             new_elapsed = self.manager.get_simulation_time() - start
@@ -122,7 +173,7 @@ class RobotController:
                 raise RuntimeError("Physics timeline stopped during execution")
             elapsed = new_elapsed
             actual = self.current_pose()
-            reference = self.model.forward(command)
+            reference = self._base_drift() @ self.model.forward(command)
             error = pose_error(actual, reference)
             self.history.append([self.manager.get_simulation_time(), phase, *actual[:3, 3],
                                  *reference[:3, 3], np.linalg.norm(error[:3]), np.linalg.norm(error[3:])])
@@ -133,6 +184,7 @@ class RobotController:
                        and np.linalg.norm(target_error[3:]) <= cfg.orientation_tolerance_rad)
             stable_steps = stable_steps + 1 if reached else 0
             if stable_steps >= 3:
+                self.last_command = command
                 return
             ticks += 1
             if ticks % 120 == 0:

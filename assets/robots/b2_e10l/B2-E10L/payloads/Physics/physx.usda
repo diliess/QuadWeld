@@ -1,0 +1,156 @@
+#usda 1.0
+(
+    customLayerData = {
+        string creator = "URDF USD Converter v0.1.2"
+    }
+    defaultPrim = "tn__B2E10L_c9"
+    doc = """Generated from Composed Stage of root layer /tmp/tmpaypi9it9/B2-E10L.usdc
+
+
+Generated from Composed Stage of root layer /tmp/urdf_import_B2-E10L_gz41b8us/usdex_B2-E10L/B2-E10L.usdc
+
+
+Generated from Composed Stage of root layer /tmp/urdf_import_B2-E10L_gz41b8us/temp_B2-E10L/B2-E10L.usd
+
+
+Generated from Composed Stage of root layer /home/hlq/QuadWeld/assets/robots/b2_e10l/B2-E10L/payloads/base.usd
+"""
+    kilogramsPerUnit = 1
+    metersPerUnit = 1
+    subLayers = [
+        @./physics.usda@
+    ]
+    upAxis = "Z"
+)
+
+over "tn__B2E10L_c9"
+{
+    over "Physics"
+    {
+        over "FL_hip_joint" (
+            prepend apiSchemas = ["PhysxJointAPI"]
+        )
+        {
+            float physxJoint:maxJointVelocity = 1317.803
+        }
+
+        over "FL_thigh_joint" (
+            prepend apiSchemas = ["PhysxJointAPI"]
+        )
+        {
+            float physxJoint:maxJointVelocity = 1317.803
+        }
+
+        over "FL_calf_joint" (
+            prepend apiSchemas = ["PhysxJointAPI"]
+        )
+        {
+            float physxJoint:maxJointVelocity = 802.1409
+        }
+
+        over "FR_hip_joint" (
+            prepend apiSchemas = ["PhysxJointAPI"]
+        )
+        {
+            float physxJoint:maxJointVelocity = 1317.803
+        }
+
+        over "FR_thigh_joint" (
+            prepend apiSchemas = ["PhysxJointAPI"]
+        )
+        {
+            float physxJoint:maxJointVelocity = 1317.803
+        }
+
+        over "FR_calf_joint" (
+            prepend apiSchemas = ["PhysxJointAPI"]
+        )
+        {
+            float physxJoint:maxJointVelocity = 802.1409
+        }
+
+        over "RL_hip_joint" (
+            prepend apiSchemas = ["PhysxJointAPI"]
+        )
+        {
+            float physxJoint:maxJointVelocity = 1317.803
+        }
+
+        over "RL_thigh_joint" (
+            prepend apiSchemas = ["PhysxJointAPI"]
+        )
+        {
+            float physxJoint:maxJointVelocity = 1317.803
+        }
+
+        over "RL_calf_joint" (
+            prepend apiSchemas = ["PhysxJointAPI"]
+        )
+        {
+            float physxJoint:maxJointVelocity = 802.1409
+        }
+
+        over "RR_hip_joint" (
+            prepend apiSchemas = ["PhysxJointAPI"]
+        )
+        {
+            float physxJoint:maxJointVelocity = 1317.803
+        }
+
+        over "RR_thigh_joint" (
+            prepend apiSchemas = ["PhysxJointAPI"]
+        )
+        {
+            float physxJoint:maxJointVelocity = 1317.803
+        }
+
+        over "RR_calf_joint" (
+            prepend apiSchemas = ["PhysxJointAPI"]
+        )
+        {
+            float physxJoint:maxJointVelocity = 802.1409
+        }
+
+        over "e10l_joint1" (
+            prepend apiSchemas = ["PhysxJointAPI"]
+        )
+        {
+            float physxJoint:maxJointVelocity = 100
+        }
+
+        over "e10l_joint2" (
+            prepend apiSchemas = ["PhysxJointAPI"]
+        )
+        {
+            float physxJoint:maxJointVelocity = 100
+        }
+
+        over "e10l_joint3" (
+            prepend apiSchemas = ["PhysxJointAPI"]
+        )
+        {
+            float physxJoint:maxJointVelocity = 150
+        }
+
+        over "e10l_joint4" (
+            prepend apiSchemas = ["PhysxJointAPI"]
+        )
+        {
+            float physxJoint:maxJointVelocity = 150
+        }
+
+        over "e10l_joint5" (
+            prepend apiSchemas = ["PhysxJointAPI"]
+        )
+        {
+            float physxJoint:maxJointVelocity = 180.00002
+        }
+
+        over "e10l_joint6" (
+            prepend apiSchemas = ["PhysxJointAPI"]
+        )
+        {
+            float physxJoint:maxJointVelocity = 180.00002
+        }
+    }
+}

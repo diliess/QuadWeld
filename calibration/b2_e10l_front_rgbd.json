@@ -1,0 +1,9 @@
+{
+  "description": "B2 front depth camera (URDF joint_f_dc, 45 deg down) in the E10L base frame on the trunk. Nominal intrinsics; replace with the measured camera calibration on hardware; contains no workpiece pose.",
+  "image_size": [640, 480],
+  "camera_matrix": [[400.0, 0.0, 320.0], [0.0, 400.0, 240.0], [0.0, 0.0, 1.0]],
+  "distortion_coefficients": [0.0, 0.0, 0.0, 0.0, 0.0],
+  "depth_scale_to_m": 1.0,
+  "depth_convention": "optical_z",
+  "base_from_camera": [[0.0, -0.707111, 0.707103, 0.41251], [-1.0, 0.0, 0.0, 0.024997], [0.0, -0.707103, -0.707111, -0.06235], [0.0, 0.0, 0.0, 1.0]]
+}

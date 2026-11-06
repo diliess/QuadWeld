@@ -1,0 +1,18 @@
+{
+  "asset": "plate_grid.usda",
+  "default_prim": "/Workpiece",
+  "units": "metres",
+  "up_axis": "Z",
+  "origin": "grid centre, plate top",
+  "robots_included": false,
+  "source": "scene/workpieces.py",
+  "workpiece": {
+    "kind": "plate-grid",
+    "grid_count": 2,
+    "tile_size_m": 0.2,
+    "gap_m": 0.003,
+    "thickness_m": 0.006,
+    "box_size_m": 0.4,
+    "wall_height_m": 0.12
+  }
+}

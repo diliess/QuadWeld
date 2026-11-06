@@ -220,3 +220,29 @@ Nested 模型输出的米制深度是模型估计值；当前脚本尚未将其�
   已保存在 [早期实验归档](../outputs/offline/depth_anything_3/archive.zip)，保留原文件名。
 
 本次验证覆盖单图深度与相机参数输出，尚未用真实深度标注评估焊接场景的测量误差。
+
+## 第二台机器（RTX 5090）的安装记录
+
+2026-10-26 在 `/home/hlq/QuadWeld` 重新部署，两份源码按上文的提交检出，SAM 3 两个补丁重新应用。
+这台机器没有 GitHub SSH 密钥，改用 HTTPS 克隆：
+
+```bash
+git clone --filter=blob:none https://github.com/facebookresearch/sam3.git thirdparty/sam3
+git clone --filter=blob:none https://github.com/ByteDance-Seed/Depth-Anything-3.git thirdparty/depth-anything-3
+```
+
+两个 Conda 环境位于 `/home/hlq/miniconda3/envs/sam3` 和 `/home/hlq/miniconda3/envs/depth-anything-3`。
+`sam3` 按上文用 pip 安装。`depth-anything-3` 使用 pip 时，在上游依赖（open3d、evo、pandas 等）与
+`numpy<2` 之间长时间回溯，改用 uv 安装同一份依赖文件，版本与上文一致：
+
+```bash
+grep -v '^-e ' environments/depth-anything-3-requirements.txt > /tmp/da3-req.txt
+uv pip install --python /home/hlq/miniconda3/envs/depth-anything-3/bin/python \
+  --index-strategy unsafe-best-match -r /tmp/da3-req.txt -e ./thirdparty/depth-anything-3
+```
+
+权重：SAM 3.1 用 `uvx --from modelscope modelscope download --model facebook/sam3.1 sam3.1_multiplex.pt
+--local_dir ./thirdparty/sam3/assets/model` 下载；DA3 用 `uvx --from huggingface_hub hf download`
+加上文版本号下载，SHA-256 与上文一致。两个环境 `pip check` 均无错误，CUDA 12.8 可在 RTX 5090 上运行，
+`scripts/check_sam3_env.py` 通过。`main.py --seam-source auto-weld` 从 Isaac Sim 进程以精简环境变量调用
+`depth-anything-3` 环境运行 `auto_weld.py`，SAM 3 环境按同级目录自动定位。

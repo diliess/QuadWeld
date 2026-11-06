@@ -1,0 +1,146 @@
+{
+  "asset": "B2-E10L/B2-E10L.usda",
+  "units": "metres",
+  "up_axis": "Z",
+  "base": "floating",
+  "sources": {
+    "b2": {
+      "url": "https://github.com/unitreerobotics/unitree_ros",
+      "path": "robots/b2_description",
+      "commit": "15ebe53f4cd77e7d745ae83b9d7ff90e685e8998"
+    },
+    "e10l": {
+      "archive": "带焊接枪E10-L机械臂模型.zip",
+      "sha256": "11acb3fa8a86bc447632821b7f3dd957df503c4e9737127e64c47b3f9a8a96e3"
+    }
+  },
+  "dropped_b2_links": [
+    "f_dc_link",
+    "f_oc_link",
+    "imu_link",
+    "lidar_link",
+    "r_dc_link",
+    "r_oc_link"
+  ],
+  "leg_joints": [
+    "FL_hip_joint",
+    "FL_thigh_joint",
+    "FL_calf_joint",
+    "FR_hip_joint",
+    "FR_thigh_joint",
+    "FR_calf_joint",
+    "RL_hip_joint",
+    "RL_thigh_joint",
+    "RL_calf_joint",
+    "RR_hip_joint",
+    "RR_thigh_joint",
+    "RR_calf_joint"
+  ],
+  "arm_joints": [
+    "e10l_joint1",
+    "e10l_joint2",
+    "e10l_joint3",
+    "e10l_joint4",
+    "e10l_joint5",
+    "e10l_joint6"
+  ],
+  "arm_base_link": "e10l_base_link",
+  "tool_link": "e10l_Link6",
+  "trunk_from_arm_base": [
+    [
+      1.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    [
+      0.0,
+      1.0,
+      0.0,
+      0.0
+    ],
+    [
+      0.0,
+      0.0,
+      1.0,
+      0.11
+    ],
+    [
+      0.0,
+      0.0,
+      0.0,
+      1.0
+    ]
+  ],
+  "link6_from_tcp": [
+    [
+      -0.4960341391036646,
+      0.1404592937497111,
+      0.8568671540227333,
+      0.0016724494053050876
+    ],
+    [
+      -0.07037022328542299,
+      -0.990086454204547,
+      0.12156004637802398,
+      0.0008720423211343586
+    ],
+    [
+      0.8654468005131488,
+      0.0,
+      0.5010008338132322,
+      0.513629911661148
+    ],
+    [
+      0.0,
+      0.0,
+      0.0,
+      1.0
+    ]
+  ],
+  "torch_hull_tcp": "torch_hull_tcp.npy",
+  "mount_plate": {
+    "size_m": [
+      0.26,
+      0.24,
+      0.02
+    ],
+    "bottom_in_trunk_m": [
+      0.0,
+      0.0,
+      0.09
+    ],
+    "mass_kg": 3.3696
+  },
+  "assumptions": {
+    "arm_mass_kg": 45.0,
+    "arm_cad_mass_kg": 29.37285663939058,
+    "torch_mass_kg": 1.5,
+    "arm_effort_nm": [
+      330.0,
+      340.0,
+      150.0,
+      56.0,
+      56.0,
+      56.0
+    ],
+    "effort_margin": 1.5,
+    "effort_floor_nm": [
+      330,
+      330,
+      150,
+      56,
+      56,
+      56
+    ],
+    "arm_velocity_deg_s": [
+      100,
+      100,
+      150,
+      150,
+      180,
+      180
+    ],
+    "tcp": "wire tip of the torch mesh, +Z along the straight nozzle"
+  }
+}

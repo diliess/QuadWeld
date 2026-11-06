@@ -1,6 +1,8 @@
 """USD robot frame discovery and task-tool authoring, independent of asset hierarchy."""
 
-from pxr import Gf, Usd, UsdGeom, UsdPhysics
+import math
+
+from pxr import Gf, Sdf, Usd, UsdGeom, UsdPhysics
 
 
 def rigid_body_path(stage, robot_path, name):
@@ -37,14 +39,43 @@ def attach_tool(stage, config):
         flange = UsdGeom.Xform.Define(stage, flange_path)
         flange.AddTranslateOp().Set(position)
         flange.AddOrientOp().Set(orientation)
-    tool = UsdGeom.Cylinder.Define(stage, f"{flange_path}/Torch")
-    tool.CreateRadiusAttr(0.008)
-    tool.CreateHeightAttr(config.tool_length_m)
-    tool.CreateAxisAttr("Z")
-    tool.AddTranslateOp().Set(Gf.Vec3d(0, 0, config.tool_length_m / 2))
-    tool.CreateDisplayColorAttr([(0.8, 0.4, 0.1)])
+    if config.tool_marker:
+        tool = UsdGeom.Cylinder.Define(stage, f"{flange_path}/Torch")
+        tool.CreateRadiusAttr(0.008)
+        tool.CreateHeightAttr(config.tool_length_m)
+        tool.CreateAxisAttr("Z")
+        tool.AddTranslateOp().Set(Gf.Vec3d(0, 0, config.tool_length_m / 2))
+        tool.CreateDisplayColorAttr([(0.8, 0.4, 0.1)])
     tcp = UsdGeom.Xform.Define(stage, f"{flange_path}/TCP")
     tcp.AddTranslateOp().Set(Gf.Vec3d(0, 0, config.tool_length_m))
     tip = UsdGeom.Sphere.Define(stage, f"{flange_path}/TCP/Tip")
     tip.CreateRadiusAttr(0.004)
     tip.CreateDisplayColorAttr([(1.0, 0.2, 0.0)])
+
+
+def author_joint_state(stage, config):
+    """Start the arm at home and held joints at their targets, with drives active from step one.
+
+    A floating base needs this before physics starts: unpowered legs fold under the trunk.
+    """
+    targets = dict(zip(config.joint_names, config.home_joint_positions))
+    gains = dict.fromkeys(config.joint_names, (config.drive_stiffness, config.drive_damping))
+    for name, angle in config.hold_joint_positions:
+        targets[name] = angle
+        gains[name] = (config.hold_stiffness, config.hold_damping)
+    joints = {p.GetName(): p for p in Usd.PrimRange(stage.GetPrimAtPath(config.robot_prim_path))
+              if p.IsA(UsdPhysics.RevoluteJoint)}
+    missing = sorted(set(targets) - set(joints))
+    if missing:
+        raise RuntimeError(f"Missing configured revolute joints: {missing}")
+    for name, angle in targets.items():
+        prim, degrees = joints[name], math.degrees(angle)
+        # USD stores angular joint state and drive gains per degree; config uses radians.
+        prim.AddAppliedSchema("PhysicsJointStateAPI:angular")
+        prim.CreateAttribute("state:angular:physics:position", Sdf.ValueTypeNames.Float).Set(degrees)
+        prim.CreateAttribute("state:angular:physics:velocity", Sdf.ValueTypeNames.Float).Set(0.)
+        drive = UsdPhysics.DriveAPI.Apply(prim, "angular")
+        drive.CreateTargetPositionAttr().Set(degrees)
+        stiffness, damping = gains[name]
+        drive.CreateStiffnessAttr().Set(math.radians(stiffness))
+        drive.CreateDampingAttr().Set(math.radians(damping))

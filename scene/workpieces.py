@@ -4,11 +4,16 @@ Only scene construction uses these dimensions. No seam coordinates are supplied
 to perception or control. Assets contain geometry/materials, not seam overlays.
 """
 
+from dataclasses import asdict
+import json
 from pathlib import Path
 
 from pxr import Gf, Sdf, Usd, UsdGeom, UsdPhysics, UsdShade
 
 from config import WorkpieceConfig
+from scene.assets import reference_asset
+
+ORIGINS = {"plate-grid": "grid centre, plate top", "open-box": "box centre, inside floor"}
 
 
 def material(stage, path, color, *, roughness=0.85, metallic=0.0):
@@ -82,6 +87,24 @@ def export_workpiece_asset(destination, config: WorkpieceConfig):
     return destination
 
 
+def export_workpiece_bundle(folder, config: WorkpieceConfig):
+    """Write <kind>.usda and manifest.json in the assets/scenes/<kind>/ layout."""
+    folder = Path(folder)
+    asset = export_workpiece_asset(folder / f"{config.kind.replace('-', '_')}.usda", config)
+    manifest = {
+        "asset": asset.name,
+        "default_prim": "/Workpiece",
+        "units": "metres",
+        "up_axis": "Z",
+        "origin": ORIGINS[config.kind],
+        "robots_included": False,
+        "source": "scene/workpieces.py",
+        "workpiece": asdict(config),
+    }
+    (folder / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n")
+    return asset
+
+
 def add_workpiece(stage, config, asset_path, stand_material):
     """Reference an exported workpiece and create its supporting fixture."""
     workpiece = config.workpiece
@@ -89,10 +112,8 @@ def add_workpiece(stage, config, asset_path, stand_material):
     top = config.plate_top_z_world
     frame = UsdGeom.Xform.Define(stage, config.plate_frame_path)
     frame.AddTranslateOp().Set(Gf.Vec3d(x, y, top))
-    assembly = UsdGeom.Xform.Define(stage, "/World/Workpiece/Assembly")
-    assembly.AddTranslateOp().Set(Gf.Vec3d(x, y, top))
-    model = stage.DefinePrim("/World/Workpiece/Assembly/Model", "Xform")
-    model.GetReferences().AddReference(str(Path(asset_path).resolve()))
+    UsdGeom.Xform.Define(stage, "/World/Workpiece/Assembly")
+    reference_asset(stage, asset_path, "/World/Workpiece/Assembly/Model", at=(x, y, top))
 
     # Grid pads leave a real air gap below seams; the plinth does not fill them.
     stand_top = top - workpiece.thickness_m

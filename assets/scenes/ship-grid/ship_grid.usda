@@ -1,0 +1,1795 @@
+#usda 1.0
+(
+    defaultPrim = "ShipGrid"
+    metersPerUnit = 1
+    upAxis = "Z"
+)
+
+def Xform "ShipGrid" (
+    customData = {
+        string environmentType = "ship-grid"
+    }
+    doc = "Static ship-plate grid, exported without robots. Origin: deck top at grid centre."
+)
+{
+    def Scope "Looks"
+    {
+        def Material "deck"
+        {
+            token outputs:surface.connect = </ShipGrid/Looks/deck/Surface.outputs:surface>
+
+            def Shader "Surface"
+            {
+                uniform token info:id = "UsdPreviewSurface"
+                color3f inputs:diffuseColor = (0.4, 0.46, 0.47)
+                color3f inputs:diffuseColor.connect = </ShipGrid/Looks/deck/Texture.outputs:rgb>
+                float inputs:metallic = 0.4
+                float inputs:roughness = 0.8
+                token outputs:surface
+            }
+
+            def Shader "UV"
+            {
+                uniform token info:id = "UsdPrimvarReader_float2"
+                string inputs:varname = "st"
+                float2 outputs:result
+            }
+
+            def Shader "Repeat"
+            {
+                uniform token info:id = "UsdTransform2d"
+                float2 inputs:in.connect = </ShipGrid/Looks/deck/UV.outputs:result>
+                float2 inputs:scale = (3, 3)
+                float2 outputs:result
+            }
+
+            def Shader "Texture"
+            {
+                uniform token info:id = "UsdUVTexture"
+                asset inputs:file = @textures/steel_base.png@
+                float4 inputs:scale = (1, 1, 1, 1)
+                token inputs:sourceColorSpace = "sRGB"
+                float2 inputs:st.connect = </ShipGrid/Looks/deck/Repeat.outputs:result>
+                token inputs:wrapS = "repeat"
+                token inputs:wrapT = "repeat"
+                float3 outputs:rgb
+            }
+        }
+
+        def Material "flange"
+        {
+            token outputs:surface.connect = </ShipGrid/Looks/flange/Surface.outputs:surface>
+
+            def Shader "Surface"
+            {
+                uniform token info:id = "UsdPreviewSurface"
+                color3f inputs:diffuseColor = (0.52, 0.6, 0.59)
+                color3f inputs:diffuseColor.connect = </ShipGrid/Looks/flange/Texture.outputs:rgb>
+                float inputs:metallic = 0.5
+                float inputs:roughness = 0.72
+                token outputs:surface
+            }
+
+            def Shader "UV"
+            {
+                uniform token info:id = "UsdPrimvarReader_float2"
+                string inputs:varname = "st"
+                float2 outputs:result
+            }
+
+            def Shader "Repeat"
+            {
+                uniform token info:id = "UsdTransform2d"
+                float2 inputs:in.connect = </ShipGrid/Looks/flange/UV.outputs:result>
+                float2 inputs:scale = (8, 8)
+                float2 outputs:result
+            }
+
+            def Shader "Texture"
+            {
+                uniform token info:id = "UsdUVTexture"
+                asset inputs:file = @textures/steel_base.png@
+                float4 inputs:scale = (1, 1, 1, 1)
+                token inputs:sourceColorSpace = "sRGB"
+                float2 inputs:st.connect = </ShipGrid/Looks/flange/Repeat.outputs:result>
+                token inputs:wrapS = "repeat"
+                token inputs:wrapT = "repeat"
+                float3 outputs:rgb
+            }
+        }
+
+        def Material "web"
+        {
+            token outputs:surface.connect = </ShipGrid/Looks/web/Surface.outputs:surface>
+
+            def Shader "Surface"
+            {
+                uniform token info:id = "UsdPreviewSurface"
+                color3f inputs:diffuseColor = (0.18, 0.25, 0.23)
+                color3f inputs:diffuseColor.connect = </ShipGrid/Looks/web/Texture.outputs:rgb>
+                float inputs:metallic = 0.5
+                float inputs:roughness = 0.72
+                token outputs:surface
+            }
+
+            def Shader "UV"
+            {
+                uniform token info:id = "UsdPrimvarReader_float2"
+                string inputs:varname = "st"
+                float2 outputs:result
+            }
+
+            def Shader "Repeat"
+            {
+                uniform token info:id = "UsdTransform2d"
+                float2 inputs:in.connect = </ShipGrid/Looks/web/UV.outputs:result>
+                float2 inputs:scale = (8, 8)
+                float2 outputs:result
+            }
+
+            def Shader "Texture"
+            {
+                uniform token info:id = "UsdUVTexture"
+                asset inputs:file = @textures/steel_upright.png@
+                float4 inputs:scale = (1, 1, 1, 1)
+                token inputs:sourceColorSpace = "sRGB"
+                float2 inputs:st.connect = </ShipGrid/Looks/web/Repeat.outputs:result>
+                token inputs:wrapS = "repeat"
+                token inputs:wrapT = "repeat"
+                float3 outputs:rgb
+            }
+        }
+
+        def Material "cut"
+        {
+            token outputs:surface.connect = </ShipGrid/Looks/cut/Surface.outputs:surface>
+
+            def Shader "Surface"
+            {
+                uniform token info:id = "UsdPreviewSurface"
+                color3f inputs:diffuseColor = (0.68, 0.76, 0.75)
+                float inputs:metallic = 0.75
+                float inputs:roughness = 0.4
+                token outputs:surface
+            }
+        }
+
+        def Material "surround"
+        {
+            token outputs:surface.connect = </ShipGrid/Looks/surround/Surface.outputs:surface>
+
+            def Shader "Surface"
+            {
+                uniform token info:id = "UsdPreviewSurface"
+                color3f inputs:diffuseColor = (0.22, 0.25, 0.28)
+                float inputs:metallic = 0
+                float inputs:roughness = 0.95
+                token outputs:surface
+            }
+        }
+
+        def Material "SteelContact" (
+            prepend apiSchemas = ["PhysicsMaterialAPI"]
+        )
+        {
+            float physics:dynamicFriction = 0.65
+            float physics:restitution = 0
+            float physics:staticFriction = 0.65
+        }
+    }
+
+    def Xform "Parts"
+    {
+        def Xform "ship_grid_deck"
+        {
+            quatf xformOp:orient = (1, 0, 0, 0)
+            double3 xformOp:translate = (0, 0, -0.004999999888241291)
+            uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient"]
+
+            def Mesh "Visual" (
+                prepend apiSchemas = ["MaterialBindingAPI"]
+            )
+            {
+                float3[] extent = [(-3.225, -3.225, -0.005), (3.225, 3.225, 0.005)]
+                int[] faceVertexCounts = [4, 4, 4, 4, 4, 4]
+                int[] faceVertexIndices = [0, 3, 2, 1, 4, 5, 6, 7, 0, 1, 5, 4, 1, 2, 6, 5, 2, 3, 7, 6, 3, 0, 4, 7]
+                rel material:binding = </ShipGrid/Looks/deck>
+                point3f[] points = [(-3.225, -3.225, -0.005), (3.225, -3.225, -0.005), (3.225, 3.225, -0.005), (-3.225, 3.225, -0.005), (-3.225, -3.225, 0.005), (3.225, -3.225, 0.005), (3.225, 3.225, 0.005), (-3.225, 3.225, 0.005)]
+                color3f[] primvars:displayColor = [(0.4, 0.46, 0.47)]
+                texCoord2f[] primvars:st = [(0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1)] (
+                    interpolation = "faceVarying"
+                )
+                uniform token subdivisionScheme = "none"
+            }
+
+            def Cube "Collision" (
+                prepend apiSchemas = ["PhysicsCollisionAPI", "MaterialBindingAPI"]
+            )
+            {
+                rel material:binding:physics = </ShipGrid/Looks/SteelContact> (
+                    bindMaterialAs = "weakerThanDescendants"
+                )
+                bool physics:collisionEnabled = 1
+                double size = 1
+                token visibility = "invisible"
+                float3 xformOp:scale = (6.45, 6.45, 0.01)
+                uniform token[] xformOpOrder = ["xformOp:scale"]
+            }
+        }
+
+        def Xform "ship_grid_row_0_flange"
+        {
+            quatf xformOp:orient = (1, 0, 0, 0)
+            double3 xformOp:translate = (0, -3.015000104904175, 0.004999999888241291)
+            uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient"]
+
+            def Mesh "Visual" (
+                prepend apiSchemas = ["MaterialBindingAPI"]
+            )
+            {
+                float3[] extent = [(-3.105, -0.09, -0.005), (3.105, 0.09, 0.005)]
+                int[] faceVertexCounts = [4, 4, 4, 4, 4, 4]
+                int[] faceVertexIndices = [0, 3, 2, 1, 4, 5, 6, 7, 0, 1, 5, 4, 1, 2, 6, 5, 2, 3, 7, 6, 3, 0, 4, 7]
+                rel material:binding = </ShipGrid/Looks/flange>
+                point3f[] points = [(-3.105, -0.09, -0.005), (3.105, -0.09, -0.005), (3.105, 0.09, -0.005), (-3.105, 0.09, -0.005), (-3.105, -0.09, 0.005), (3.105, -0.09, 0.005), (3.105, 0.09, 0.005), (-3.105, 0.09, 0.005)]
+                color3f[] primvars:displayColor = [(0.52, 0.6, 0.59)]
+                texCoord2f[] primvars:st = [(0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1)] (
+                    interpolation = "faceVarying"
+                )
+                uniform token subdivisionScheme = "none"
+            }
+
+            def Cube "Collision" (
+                prepend apiSchemas = ["PhysicsCollisionAPI", "MaterialBindingAPI"]
+            )
+            {
+                rel material:binding:physics = </ShipGrid/Looks/SteelContact> (
+                    bindMaterialAs = "weakerThanDescendants"
+                )
+                bool physics:collisionEnabled = 1
+                double size = 1
+                token visibility = "invisible"
+                float3 xformOp:scale = (6.21, 0.18, 0.01)
+                uniform token[] xformOpOrder = ["xformOp:scale"]
+            }
+        }
+
+        def Xform "ship_grid_row_1_flange"
+        {
+            quatf xformOp:orient = (1, 0, 0, 0)
+            double3 xformOp:translate = (0, -1.0049999952316284, 0.004999999888241291)
+            uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient"]
+
+            def Mesh "Visual" (
+                prepend apiSchemas = ["MaterialBindingAPI"]
+            )
+            {
+                float3[] extent = [(-3.105, -0.09, -0.005), (3.105, 0.09, 0.005)]
+                int[] faceVertexCounts = [4, 4, 4, 4, 4, 4]
+                int[] faceVertexIndices = [0, 3, 2, 1, 4, 5, 6, 7, 0, 1, 5, 4, 1, 2, 6, 5, 2, 3, 7, 6, 3, 0, 4, 7]
+                rel material:binding = </ShipGrid/Looks/flange>
+                point3f[] points = [(-3.105, -0.09, -0.005), (3.105, -0.09, -0.005), (3.105, 0.09, -0.005), (-3.105, 0.09, -0.005), (-3.105, -0.09, 0.005), (3.105, -0.09, 0.005), (3.105, 0.09, 0.005), (-3.105, 0.09, 0.005)]
+                color3f[] primvars:displayColor = [(0.52, 0.6, 0.59)]
+                texCoord2f[] primvars:st = [(0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1)] (
+                    interpolation = "faceVarying"
+                )
+                uniform token subdivisionScheme = "none"
+            }
+
+            def Cube "Collision" (
+                prepend apiSchemas = ["PhysicsCollisionAPI", "MaterialBindingAPI"]
+            )
+            {
+                rel material:binding:physics = </ShipGrid/Looks/SteelContact> (
+                    bindMaterialAs = "weakerThanDescendants"
+                )
+                bool physics:collisionEnabled = 1
+                double size = 1
+                token visibility = "invisible"
+                float3 xformOp:scale = (6.21, 0.18, 0.01)
+                uniform token[] xformOpOrder = ["xformOp:scale"]
+            }
+        }
+
+        def Xform "ship_grid_row_2_flange"
+        {
+            quatf xformOp:orient = (1, 0, 0, 0)
+            double3 xformOp:translate = (0, 1.0049999952316284, 0.004999999888241291)
+            uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient"]
+
+            def Mesh "Visual" (
+                prepend apiSchemas = ["MaterialBindingAPI"]
+            )
+            {
+                float3[] extent = [(-3.105, -0.09, -0.005), (3.105, 0.09, 0.005)]
+                int[] faceVertexCounts = [4, 4, 4, 4, 4, 4]
+                int[] faceVertexIndices = [0, 3, 2, 1, 4, 5, 6, 7, 0, 1, 5, 4, 1, 2, 6, 5, 2, 3, 7, 6, 3, 0, 4, 7]
+                rel material:binding = </ShipGrid/Looks/flange>
+                point3f[] points = [(-3.105, -0.09, -0.005), (3.105, -0.09, -0.005), (3.105, 0.09, -0.005), (-3.105, 0.09, -0.005), (-3.105, -0.09, 0.005), (3.105, -0.09, 0.005), (3.105, 0.09, 0.005), (-3.105, 0.09, 0.005)]
+                color3f[] primvars:displayColor = [(0.52, 0.6, 0.59)]
+                texCoord2f[] primvars:st = [(0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1)] (
+                    interpolation = "faceVarying"
+                )
+                uniform token subdivisionScheme = "none"
+            }
+
+            def Cube "Collision" (
+                prepend apiSchemas = ["PhysicsCollisionAPI", "MaterialBindingAPI"]
+            )
+            {
+                rel material:binding:physics = </ShipGrid/Looks/SteelContact> (
+                    bindMaterialAs = "weakerThanDescendants"
+                )
+                bool physics:collisionEnabled = 1
+                double size = 1
+                token visibility = "invisible"
+                float3 xformOp:scale = (6.21, 0.18, 0.01)
+                uniform token[] xformOpOrder = ["xformOp:scale"]
+            }
+        }
+
+        def Xform "ship_grid_row_3_flange"
+        {
+            quatf xformOp:orient = (1, 0, 0, 0)
+            double3 xformOp:translate = (0, 3.015000104904175, 0.004999999888241291)
+            uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient"]
+
+            def Mesh "Visual" (
+                prepend apiSchemas = ["MaterialBindingAPI"]
+            )
+            {
+                float3[] extent = [(-3.105, -0.09, -0.005), (3.105, 0.09, 0.005)]
+                int[] faceVertexCounts = [4, 4, 4, 4, 4, 4]
+                int[] faceVertexIndices = [0, 3, 2, 1, 4, 5, 6, 7, 0, 1, 5, 4, 1, 2, 6, 5, 2, 3, 7, 6, 3, 0, 4, 7]
+                rel material:binding = </ShipGrid/Looks/flange>
+                point3f[] points = [(-3.105, -0.09, -0.005), (3.105, -0.09, -0.005), (3.105, 0.09, -0.005), (-3.105, 0.09, -0.005), (-3.105, -0.09, 0.005), (3.105, -0.09, 0.005), (3.105, 0.09, 0.005), (-3.105, 0.09, 0.005)]
+                color3f[] primvars:displayColor = [(0.52, 0.6, 0.59)]
+                texCoord2f[] primvars:st = [(0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1)] (
+                    interpolation = "faceVarying"
+                )
+                uniform token subdivisionScheme = "none"
+            }
+
+            def Cube "Collision" (
+                prepend apiSchemas = ["PhysicsCollisionAPI", "MaterialBindingAPI"]
+            )
+            {
+                rel material:binding:physics = </ShipGrid/Looks/SteelContact> (
+                    bindMaterialAs = "weakerThanDescendants"
+                )
+                bool physics:collisionEnabled = 1
+                double size = 1
+                token visibility = "invisible"
+                float3 xformOp:scale = (6.21, 0.18, 0.01)
+                uniform token[] xformOpOrder = ["xformOp:scale"]
+            }
+        }
+
+        def Xform "ship_grid_column_0_segment_0_flange"
+        {
+            quatf xformOp:orient = (1, 0, 0, 0)
+            double3 xformOp:translate = (-3.015000104904175, -2.009999990463257, 0.004999999888241291)
+            uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient"]
+
+            def Mesh "Visual" (
+                prepend apiSchemas = ["MaterialBindingAPI"]
+            )
+            {
+                float3[] extent = [(-0.09, -0.915, -0.005), (0.09, 0.915, 0.005)]
+                int[] faceVertexCounts = [4, 4, 4, 4, 4, 4]
+                int[] faceVertexIndices = [0, 3, 2, 1, 4, 5, 6, 7, 0, 1, 5, 4, 1, 2, 6, 5, 2, 3, 7, 6, 3, 0, 4, 7]
+                rel material:binding = </ShipGrid/Looks/flange>
+                point3f[] points = [(-0.09, -0.915, -0.005), (0.09, -0.915, -0.005), (0.09, 0.915, -0.005), (-0.09, 0.915, -0.005), (-0.09, -0.915, 0.005), (0.09, -0.915, 0.005), (0.09, 0.915, 0.005), (-0.09, 0.915, 0.005)]
+                color3f[] primvars:displayColor = [(0.52, 0.6, 0.59)]
+                texCoord2f[] primvars:st = [(0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1)] (
+                    interpolation = "faceVarying"
+                )
+                uniform token subdivisionScheme = "none"
+            }
+
+            def Cube "Collision" (
+                prepend apiSchemas = ["PhysicsCollisionAPI", "MaterialBindingAPI"]
+            )
+            {
+                rel material:binding:physics = </ShipGrid/Looks/SteelContact> (
+                    bindMaterialAs = "weakerThanDescendants"
+                )
+                bool physics:collisionEnabled = 1
+                double size = 1
+                token visibility = "invisible"
+                float3 xformOp:scale = (0.18, 1.83, 0.01)
+                uniform token[] xformOpOrder = ["xformOp:scale"]
+            }
+        }
+
+        def Xform "ship_grid_column_0_segment_1_flange"
+        {
+            quatf xformOp:orient = (1, 0, 0, 0)
+            double3 xformOp:translate = (-3.015000104904175, 0, 0.004999999888241291)
+            uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient"]
+
+            def Mesh "Visual" (
+                prepend apiSchemas = ["MaterialBindingAPI"]
+            )
+            {
+                float3[] extent = [(-0.09, -0.915, -0.005), (0.09, 0.915, 0.005)]
+                int[] faceVertexCounts = [4, 4, 4, 4, 4, 4]
+                int[] faceVertexIndices = [0, 3, 2, 1, 4, 5, 6, 7, 0, 1, 5, 4, 1, 2, 6, 5, 2, 3, 7, 6, 3, 0, 4, 7]
+                rel material:binding = </ShipGrid/Looks/flange>
+                point3f[] points = [(-0.09, -0.915, -0.005), (0.09, -0.915, -0.005), (0.09, 0.915, -0.005), (-0.09, 0.915, -0.005), (-0.09, -0.915, 0.005), (0.09, -0.915, 0.005), (0.09, 0.915, 0.005), (-0.09, 0.915, 0.005)]
+                color3f[] primvars:displayColor = [(0.52, 0.6, 0.59)]
+                texCoord2f[] primvars:st = [(0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1)] (
+                    interpolation = "faceVarying"
+                )
+                uniform token subdivisionScheme = "none"
+            }
+
+            def Cube "Collision" (
+                prepend apiSchemas = ["PhysicsCollisionAPI", "MaterialBindingAPI"]
+            )
+            {
+                rel material:binding:physics = </ShipGrid/Looks/SteelContact> (
+                    bindMaterialAs = "weakerThanDescendants"
+                )
+                bool physics:collisionEnabled = 1
+                double size = 1
+                token visibility = "invisible"
+                float3 xformOp:scale = (0.18, 1.83, 0.01)
+                uniform token[] xformOpOrder = ["xformOp:scale"]
+            }
+        }
+
+        def Xform "ship_grid_column_0_segment_2_flange"
+        {
+            quatf xformOp:orient = (1, 0, 0, 0)
+            double3 xformOp:translate = (-3.015000104904175, 2.009999990463257, 0.004999999888241291)
+            uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient"]
+
+            def Mesh "Visual" (
+                prepend apiSchemas = ["MaterialBindingAPI"]
+            )
+            {
+                float3[] extent = [(-0.09, -0.915, -0.005), (0.09, 0.915, 0.005)]
+                int[] faceVertexCounts = [4, 4, 4, 4, 4, 4]
+                int[] faceVertexIndices = [0, 3, 2, 1, 4, 5, 6, 7, 0, 1, 5, 4, 1, 2, 6, 5, 2, 3, 7, 6, 3, 0, 4, 7]
+                rel material:binding = </ShipGrid/Looks/flange>
+                point3f[] points = [(-0.09, -0.915, -0.005), (0.09, -0.915, -0.005), (0.09, 0.915, -0.005), (-0.09, 0.915, -0.005), (-0.09, -0.915, 0.005), (0.09, -0.915, 0.005), (0.09, 0.915, 0.005), (-0.09, 0.915, 0.005)]
+                color3f[] primvars:displayColor = [(0.52, 0.6, 0.59)]
+                texCoord2f[] primvars:st = [(0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1)] (
+                    interpolation = "faceVarying"
+                )
+                uniform token subdivisionScheme = "none"
+            }
+
+            def Cube "Collision" (
+                prepend apiSchemas = ["PhysicsCollisionAPI", "MaterialBindingAPI"]
+            )
+            {
+                rel material:binding:physics = </ShipGrid/Looks/SteelContact> (
+                    bindMaterialAs = "weakerThanDescendants"
+                )
+                bool physics:collisionEnabled = 1
+                double size = 1
+                token visibility = "invisible"
+                float3 xformOp:scale = (0.18, 1.83, 0.01)
+                uniform token[] xformOpOrder = ["xformOp:scale"]
+            }
+        }
+
+        def Xform "ship_grid_column_1_segment_0_flange"
+        {
+            quatf xformOp:orient = (1, 0, 0, 0)
+            double3 xformOp:translate = (-1.0049999952316284, -2.009999990463257, 0.004999999888241291)
+            uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient"]
+
+            def Mesh "Visual" (
+                prepend apiSchemas = ["MaterialBindingAPI"]
+            )
+            {
+                float3[] extent = [(-0.09, -0.915, -0.005), (0.09, 0.915, 0.005)]
+                int[] faceVertexCounts = [4, 4, 4, 4, 4, 4]
+                int[] faceVertexIndices = [0, 3, 2, 1, 4, 5, 6, 7, 0, 1, 5, 4, 1, 2, 6, 5, 2, 3, 7, 6, 3, 0, 4, 7]
+                rel material:binding = </ShipGrid/Looks/flange>
+                point3f[] points = [(-0.09, -0.915, -0.005), (0.09, -0.915, -0.005), (0.09, 0.915, -0.005), (-0.09, 0.915, -0.005), (-0.09, -0.915, 0.005), (0.09, -0.915, 0.005), (0.09, 0.915, 0.005), (-0.09, 0.915, 0.005)]
+                color3f[] primvars:displayColor = [(0.52, 0.6, 0.59)]
+                texCoord2f[] primvars:st = [(0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1)] (
+                    interpolation = "faceVarying"
+                )
+                uniform token subdivisionScheme = "none"
+            }
+
+            def Cube "Collision" (
+                prepend apiSchemas = ["PhysicsCollisionAPI", "MaterialBindingAPI"]
+            )
+            {
+                rel material:binding:physics = </ShipGrid/Looks/SteelContact> (
+                    bindMaterialAs = "weakerThanDescendants"
+                )
+                bool physics:collisionEnabled = 1
+                double size = 1
+                token visibility = "invisible"
+                float3 xformOp:scale = (0.18, 1.83, 0.01)
+                uniform token[] xformOpOrder = ["xformOp:scale"]
+            }
+        }
+
+        def Xform "ship_grid_column_1_segment_1_flange"
+        {
+            quatf xformOp:orient = (1, 0, 0, 0)
+            double3 xformOp:translate = (-1.0049999952316284, 0, 0.004999999888241291)
+            uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient"]
+
+            def Mesh "Visual" (
+                prepend apiSchemas = ["MaterialBindingAPI"]
+            )
+            {
+                float3[] extent = [(-0.09, -0.915, -0.005), (0.09, 0.915, 0.005)]
+                int[] faceVertexCounts = [4, 4, 4, 4, 4, 4]
+                int[] faceVertexIndices = [0, 3, 2, 1, 4, 5, 6, 7, 0, 1, 5, 4, 1, 2, 6, 5, 2, 3, 7, 6, 3, 0, 4, 7]
+                rel material:binding = </ShipGrid/Looks/flange>
+                point3f[] points = [(-0.09, -0.915, -0.005), (0.09, -0.915, -0.005), (0.09, 0.915, -0.005), (-0.09, 0.915, -0.005), (-0.09, -0.915, 0.005), (0.09, -0.915, 0.005), (0.09, 0.915, 0.005), (-0.09, 0.915, 0.005)]
+                color3f[] primvars:displayColor = [(0.52, 0.6, 0.59)]
+                texCoord2f[] primvars:st = [(0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1)] (
+                    interpolation = "faceVarying"
+                )
+                uniform token subdivisionScheme = "none"
+            }
+
+            def Cube "Collision" (
+                prepend apiSchemas = ["PhysicsCollisionAPI", "MaterialBindingAPI"]
+            )
+            {
+                rel material:binding:physics = </ShipGrid/Looks/SteelContact> (
+                    bindMaterialAs = "weakerThanDescendants"
+                )
+                bool physics:collisionEnabled = 1
+                double size = 1
+                token visibility = "invisible"
+                float3 xformOp:scale = (0.18, 1.83, 0.01)
+                uniform token[] xformOpOrder = ["xformOp:scale"]
+            }
+        }
+
+        def Xform "ship_grid_column_1_segment_2_flange"
+        {
+            quatf xformOp:orient = (1, 0, 0, 0)
+            double3 xformOp:translate = (-1.0049999952316284, 2.009999990463257, 0.004999999888241291)
+            uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient"]
+
+            def Mesh "Visual" (
+                prepend apiSchemas = ["MaterialBindingAPI"]
+            )
+            {
+                float3[] extent = [(-0.09, -0.915, -0.005), (0.09, 0.915, 0.005)]
+                int[] faceVertexCounts = [4, 4, 4, 4, 4, 4]
+                int[] faceVertexIndices = [0, 3, 2, 1, 4, 5, 6, 7, 0, 1, 5, 4, 1, 2, 6, 5, 2, 3, 7, 6, 3, 0, 4, 7]
+                rel material:binding = </ShipGrid/Looks/flange>
+                point3f[] points = [(-0.09, -0.915, -0.005), (0.09, -0.915, -0.005), (0.09, 0.915, -0.005), (-0.09, 0.915, -0.005), (-0.09, -0.915, 0.005), (0.09, -0.915, 0.005), (0.09, 0.915, 0.005), (-0.09, 0.915, 0.005)]
+                color3f[] primvars:displayColor = [(0.52, 0.6, 0.59)]
+                texCoord2f[] primvars:st = [(0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1)] (
+                    interpolation = "faceVarying"
+                )
+                uniform token subdivisionScheme = "none"
+            }
+
+            def Cube "Collision" (
+                prepend apiSchemas = ["PhysicsCollisionAPI", "MaterialBindingAPI"]
+            )
+            {
+                rel material:binding:physics = </ShipGrid/Looks/SteelContact> (
+                    bindMaterialAs = "weakerThanDescendants"
+                )
+                bool physics:collisionEnabled = 1
+                double size = 1
+                token visibility = "invisible"
+                float3 xformOp:scale = (0.18, 1.83, 0.01)
+                uniform token[] xformOpOrder = ["xformOp:scale"]
+            }
+        }
+
+        def Xform "ship_grid_column_2_segment_0_flange"
+        {
+            quatf xformOp:orient = (1, 0, 0, 0)
+            double3 xformOp:translate = (1.0049999952316284, -2.009999990463257, 0.004999999888241291)
+            uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient"]
+
+            def Mesh "Visual" (
+                prepend apiSchemas = ["MaterialBindingAPI"]
+            )
+            {
+                float3[] extent = [(-0.09, -0.915, -0.005), (0.09, 0.915, 0.005)]
+                int[] faceVertexCounts = [4, 4, 4, 4, 4, 4]
+                int[] faceVertexIndices = [0, 3, 2, 1, 4, 5, 6, 7, 0, 1, 5, 4, 1, 2, 6, 5, 2, 3, 7, 6, 3, 0, 4, 7]
+                rel material:binding = </ShipGrid/Looks/flange>
+                point3f[] points = [(-0.09, -0.915, -0.005), (0.09, -0.915, -0.005), (0.09, 0.915, -0.005), (-0.09, 0.915, -0.005), (-0.09, -0.915, 0.005), (0.09, -0.915, 0.005), (0.09, 0.915, 0.005), (-0.09, 0.915, 0.005)]
+                color3f[] primvars:displayColor = [(0.52, 0.6, 0.59)]
+                texCoord2f[] primvars:st = [(0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1)] (
+                    interpolation = "faceVarying"
+                )
+                uniform token subdivisionScheme = "none"
+            }
+
+            def Cube "Collision" (
+                prepend apiSchemas = ["PhysicsCollisionAPI", "MaterialBindingAPI"]
+            )
+            {
+                rel material:binding:physics = </ShipGrid/Looks/SteelContact> (
+                    bindMaterialAs = "weakerThanDescendants"
+                )
+                bool physics:collisionEnabled = 1
+                double size = 1
+                token visibility = "invisible"
+                float3 xformOp:scale = (0.18, 1.83, 0.01)
+                uniform token[] xformOpOrder = ["xformOp:scale"]
+            }
+        }
+
+        def Xform "ship_grid_column_2_segment_1_flange"
+        {
+            quatf xformOp:orient = (1, 0, 0, 0)
+            double3 xformOp:translate = (1.0049999952316284, 0, 0.004999999888241291)
+            uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient"]
+
+            def Mesh "Visual" (
+                prepend apiSchemas = ["MaterialBindingAPI"]
+            )
+            {
+                float3[] extent = [(-0.09, -0.915, -0.005), (0.09, 0.915, 0.005)]
+                int[] faceVertexCounts = [4, 4, 4, 4, 4, 4]
+                int[] faceVertexIndices = [0, 3, 2, 1, 4, 5, 6, 7, 0, 1, 5, 4, 1, 2, 6, 5, 2, 3, 7, 6, 3, 0, 4, 7]
+                rel material:binding = </ShipGrid/Looks/flange>
+                point3f[] points = [(-0.09, -0.915, -0.005), (0.09, -0.915, -0.005), (0.09, 0.915, -0.005), (-0.09, 0.915, -0.005), (-0.09, -0.915, 0.005), (0.09, -0.915, 0.005), (0.09, 0.915, 0.005), (-0.09, 0.915, 0.005)]
+                color3f[] primvars:displayColor = [(0.52, 0.6, 0.59)]
+                texCoord2f[] primvars:st = [(0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1)] (
+                    interpolation = "faceVarying"
+                )
+                uniform token subdivisionScheme = "none"
+            }
+
+            def Cube "Collision" (
+                prepend apiSchemas = ["PhysicsCollisionAPI", "MaterialBindingAPI"]
+            )
+            {
+                rel material:binding:physics = </ShipGrid/Looks/SteelContact> (
+                    bindMaterialAs = "weakerThanDescendants"
+                )
+                bool physics:collisionEnabled = 1
+                double size = 1
+                token visibility = "invisible"
+                float3 xformOp:scale = (0.18, 1.83, 0.01)
+                uniform token[] xformOpOrder = ["xformOp:scale"]
+            }
+        }
+
+        def Xform "ship_grid_column_2_segment_2_flange"
+        {
+            quatf xformOp:orient = (1, 0, 0, 0)
+            double3 xformOp:translate = (1.0049999952316284, 2.009999990463257, 0.004999999888241291)
+            uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient"]
+
+            def Mesh "Visual" (
+                prepend apiSchemas = ["MaterialBindingAPI"]
+            )
+            {
+                float3[] extent = [(-0.09, -0.915, -0.005), (0.09, 0.915, 0.005)]
+                int[] faceVertexCounts = [4, 4, 4, 4, 4, 4]
+                int[] faceVertexIndices = [0, 3, 2, 1, 4, 5, 6, 7, 0, 1, 5, 4, 1, 2, 6, 5, 2, 3, 7, 6, 3, 0, 4, 7]
+                rel material:binding = </ShipGrid/Looks/flange>
+                point3f[] points = [(-0.09, -0.915, -0.005), (0.09, -0.915, -0.005), (0.09, 0.915, -0.005), (-0.09, 0.915, -0.005), (-0.09, -0.915, 0.005), (0.09, -0.915, 0.005), (0.09, 0.915, 0.005), (-0.09, 0.915, 0.005)]
+                color3f[] primvars:displayColor = [(0.52, 0.6, 0.59)]
+                texCoord2f[] primvars:st = [(0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1)] (
+                    interpolation = "faceVarying"
+                )
+                uniform token subdivisionScheme = "none"
+            }
+
+            def Cube "Collision" (
+                prepend apiSchemas = ["PhysicsCollisionAPI", "MaterialBindingAPI"]
+            )
+            {
+                rel material:binding:physics = </ShipGrid/Looks/SteelContact> (
+                    bindMaterialAs = "weakerThanDescendants"
+                )
+                bool physics:collisionEnabled = 1
+                double size = 1
+                token visibility = "invisible"
+                float3 xformOp:scale = (0.18, 1.83, 0.01)
+                uniform token[] xformOpOrder = ["xformOp:scale"]
+            }
+        }
+
+        def Xform "ship_grid_column_3_segment_0_flange"
+        {
+            quatf xformOp:orient = (1, 0, 0, 0)
+            double3 xformOp:translate = (3.015000104904175, -2.009999990463257, 0.004999999888241291)
+            uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient"]
+
+            def Mesh "Visual" (
+                prepend apiSchemas = ["MaterialBindingAPI"]
+            )
+            {
+                float3[] extent = [(-0.09, -0.915, -0.005), (0.09, 0.915, 0.005)]
+                int[] faceVertexCounts = [4, 4, 4, 4, 4, 4]
+                int[] faceVertexIndices = [0, 3, 2, 1, 4, 5, 6, 7, 0, 1, 5, 4, 1, 2, 6, 5, 2, 3, 7, 6, 3, 0, 4, 7]
+                rel material:binding = </ShipGrid/Looks/flange>
+                point3f[] points = [(-0.09, -0.915, -0.005), (0.09, -0.915, -0.005), (0.09, 0.915, -0.005), (-0.09, 0.915, -0.005), (-0.09, -0.915, 0.005), (0.09, -0.915, 0.005), (0.09, 0.915, 0.005), (-0.09, 0.915, 0.005)]
+                color3f[] primvars:displayColor = [(0.52, 0.6, 0.59)]
+                texCoord2f[] primvars:st = [(0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1)] (
+                    interpolation = "faceVarying"
+                )
+                uniform token subdivisionScheme = "none"
+            }
+
+            def Cube "Collision" (
+                prepend apiSchemas = ["PhysicsCollisionAPI", "MaterialBindingAPI"]
+            )
+            {
+                rel material:binding:physics = </ShipGrid/Looks/SteelContact> (
+                    bindMaterialAs = "weakerThanDescendants"
+                )
+                bool physics:collisionEnabled = 1
+                double size = 1
+                token visibility = "invisible"
+                float3 xformOp:scale = (0.18, 1.83, 0.01)
+                uniform token[] xformOpOrder = ["xformOp:scale"]
+            }
+        }
+
+        def Xform "ship_grid_column_3_segment_1_flange"
+        {
+            quatf xformOp:orient = (1, 0, 0, 0)
+            double3 xformOp:translate = (3.015000104904175, 0, 0.004999999888241291)
+            uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient"]
+
+            def Mesh "Visual" (
+                prepend apiSchemas = ["MaterialBindingAPI"]
+            )
+            {
+                float3[] extent = [(-0.09, -0.915, -0.005), (0.09, 0.915, 0.005)]
+                int[] faceVertexCounts = [4, 4, 4, 4, 4, 4]
+                int[] faceVertexIndices = [0, 3, 2, 1, 4, 5, 6, 7, 0, 1, 5, 4, 1, 2, 6, 5, 2, 3, 7, 6, 3, 0, 4, 7]
+                rel material:binding = </ShipGrid/Looks/flange>
+                point3f[] points = [(-0.09, -0.915, -0.005), (0.09, -0.915, -0.005), (0.09, 0.915, -0.005), (-0.09, 0.915, -0.005), (-0.09, -0.915, 0.005), (0.09, -0.915, 0.005), (0.09, 0.915, 0.005), (-0.09, 0.915, 0.005)]
+                color3f[] primvars:displayColor = [(0.52, 0.6, 0.59)]
+                texCoord2f[] primvars:st = [(0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1)] (
+                    interpolation = "faceVarying"
+                )
+                uniform token subdivisionScheme = "none"
+            }
+
+            def Cube "Collision" (
+                prepend apiSchemas = ["PhysicsCollisionAPI", "MaterialBindingAPI"]
+            )
+            {
+                rel material:binding:physics = </ShipGrid/Looks/SteelContact> (
+                    bindMaterialAs = "weakerThanDescendants"
+                )
+                bool physics:collisionEnabled = 1
+                double size = 1
+                token visibility = "invisible"
+                float3 xformOp:scale = (0.18, 1.83, 0.01)
+                uniform token[] xformOpOrder = ["xformOp:scale"]
+            }
+        }
+
+        def Xform "ship_grid_column_3_segment_2_flange"
+        {
+            quatf xformOp:orient = (1, 0, 0, 0)
+            double3 xformOp:translate = (3.015000104904175, 2.009999990463257, 0.004999999888241291)
+            uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient"]
+
+            def Mesh "Visual" (
+                prepend apiSchemas = ["MaterialBindingAPI"]
+            )
+            {
+                float3[] extent = [(-0.09, -0.915, -0.005), (0.09, 0.915, 0.005)]
+                int[] faceVertexCounts = [4, 4, 4, 4, 4, 4]
+                int[] faceVertexIndices = [0, 3, 2, 1, 4, 5, 6, 7, 0, 1, 5, 4, 1, 2, 6, 5, 2, 3, 7, 6, 3, 0, 4, 7]
+                rel material:binding = </ShipGrid/Looks/flange>
+                point3f[] points = [(-0.09, -0.915, -0.005), (0.09, -0.915, -0.005), (0.09, 0.915, -0.005), (-0.09, 0.915, -0.005), (-0.09, -0.915, 0.005), (0.09, -0.915, 0.005), (0.09, 0.915, 0.005), (-0.09, 0.915, 0.005)]
+                color3f[] primvars:displayColor = [(0.52, 0.6, 0.59)]
+                texCoord2f[] primvars:st = [(0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1)] (
+                    interpolation = "faceVarying"
+                )
+                uniform token subdivisionScheme = "none"
+            }
+
+            def Cube "Collision" (
+                prepend apiSchemas = ["PhysicsCollisionAPI", "MaterialBindingAPI"]
+            )
+            {
+                rel material:binding:physics = </ShipGrid/Looks/SteelContact> (
+                    bindMaterialAs = "weakerThanDescendants"
+                )
+                bool physics:collisionEnabled = 1
+                double size = 1
+                token visibility = "invisible"
+                float3 xformOp:scale = (0.18, 1.83, 0.01)
+                uniform token[] xformOpOrder = ["xformOp:scale"]
+            }
+        }
+
+        def Xform "ship_grid_row_0_web"
+        {
+            quatf xformOp:orient = (1, 0, 0, 0)
+            double3 xformOp:translate = (0, -3.015000104904175, 0.11999999731779099)
+            uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient"]
+
+            def Mesh "Visual" (
+                prepend apiSchemas = ["MaterialBindingAPI"]
+            )
+            {
+                float3[] extent = [(-3.02, -0.005, -0.11), (3.02, 0.005, 0.11)]
+                int[] faceVertexCounts = [4, 4, 4, 4, 4, 4]
+                int[] faceVertexIndices = [0, 3, 2, 1, 4, 5, 6, 7, 0, 1, 5, 4, 1, 2, 6, 5, 2, 3, 7, 6, 3, 0, 4, 7]
+                rel material:binding = </ShipGrid/Looks/web>
+                point3f[] points = [(-3.02, -0.005, -0.11), (3.02, -0.005, -0.11), (3.02, 0.005, -0.11), (-3.02, 0.005, -0.11), (-3.02, -0.005, 0.11), (3.02, -0.005, 0.11), (3.02, 0.005, 0.11), (-3.02, 0.005, 0.11)]
+                color3f[] primvars:displayColor = [(0.18, 0.25, 0.23)]
+                texCoord2f[] primvars:st = [(0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1)] (
+                    interpolation = "faceVarying"
+                )
+                uniform token subdivisionScheme = "none"
+            }
+
+            def Cube "Collision" (
+                prepend apiSchemas = ["PhysicsCollisionAPI", "MaterialBindingAPI"]
+            )
+            {
+                rel material:binding:physics = </ShipGrid/Looks/SteelContact> (
+                    bindMaterialAs = "weakerThanDescendants"
+                )
+                bool physics:collisionEnabled = 1
+                double size = 1
+                token visibility = "invisible"
+                float3 xformOp:scale = (6.04, 0.01, 0.22)
+                uniform token[] xformOpOrder = ["xformOp:scale"]
+            }
+        }
+
+        def Xform "ship_grid_row_1_web"
+        {
+            quatf xformOp:orient = (1, 0, 0, 0)
+            double3 xformOp:translate = (0, -1.0049999952316284, 0.11999999731779099)
+            uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient"]
+
+            def Mesh "Visual" (
+                prepend apiSchemas = ["MaterialBindingAPI"]
+            )
+            {
+                float3[] extent = [(-3.02, -0.005, -0.11), (3.02, 0.005, 0.11)]
+                int[] faceVertexCounts = [4, 4, 4, 4, 4, 4]
+                int[] faceVertexIndices = [0, 3, 2, 1, 4, 5, 6, 7, 0, 1, 5, 4, 1, 2, 6, 5, 2, 3, 7, 6, 3, 0, 4, 7]
+                rel material:binding = </ShipGrid/Looks/web>
+                point3f[] points = [(-3.02, -0.005, -0.11), (3.02, -0.005, -0.11), (3.02, 0.005, -0.11), (-3.02, 0.005, -0.11), (-3.02, -0.005, 0.11), (3.02, -0.005, 0.11), (3.02, 0.005, 0.11), (-3.02, 0.005, 0.11)]
+                color3f[] primvars:displayColor = [(0.18, 0.25, 0.23)]
+                texCoord2f[] primvars:st = [(0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1)] (
+                    interpolation = "faceVarying"
+                )
+                uniform token subdivisionScheme = "none"
+            }
+
+            def Cube "Collision" (
+                prepend apiSchemas = ["PhysicsCollisionAPI", "MaterialBindingAPI"]
+            )
+            {
+                rel material:binding:physics = </ShipGrid/Looks/SteelContact> (
+                    bindMaterialAs = "weakerThanDescendants"
+                )
+                bool physics:collisionEnabled = 1
+                double size = 1
+                token visibility = "invisible"
+                float3 xformOp:scale = (6.04, 0.01, 0.22)
+                uniform token[] xformOpOrder = ["xformOp:scale"]
+            }
+        }
+
+        def Xform "ship_grid_row_2_web"
+        {
+            quatf xformOp:orient = (1, 0, 0, 0)
+            double3 xformOp:translate = (0, 1.0049999952316284, 0.11999999731779099)
+            uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient"]
+
+            def Mesh "Visual" (
+                prepend apiSchemas = ["MaterialBindingAPI"]
+            )
+            {
+                float3[] extent = [(-3.02, -0.005, -0.11), (3.02, 0.005, 0.11)]
+                int[] faceVertexCounts = [4, 4, 4, 4, 4, 4]
+                int[] faceVertexIndices = [0, 3, 2, 1, 4, 5, 6, 7, 0, 1, 5, 4, 1, 2, 6, 5, 2, 3, 7, 6, 3, 0, 4, 7]
+                rel material:binding = </ShipGrid/Looks/web>
+                point3f[] points = [(-3.02, -0.005, -0.11), (3.02, -0.005, -0.11), (3.02, 0.005, -0.11), (-3.02, 0.005, -0.11), (-3.02, -0.005, 0.11), (3.02, -0.005, 0.11), (3.02, 0.005, 0.11), (-3.02, 0.005, 0.11)]
+                color3f[] primvars:displayColor = [(0.18, 0.25, 0.23)]
+                texCoord2f[] primvars:st = [(0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1)] (
+                    interpolation = "faceVarying"
+                )
+                uniform token subdivisionScheme = "none"
+            }
+
+            def Cube "Collision" (
+                prepend apiSchemas = ["PhysicsCollisionAPI", "MaterialBindingAPI"]
+            )
+            {
+                rel material:binding:physics = </ShipGrid/Looks/SteelContact> (
+                    bindMaterialAs = "weakerThanDescendants"
+                )
+                bool physics:collisionEnabled = 1
+                double size = 1
+                token visibility = "invisible"
+                float3 xformOp:scale = (6.04, 0.01, 0.22)
+                uniform token[] xformOpOrder = ["xformOp:scale"]
+            }
+        }
+
+        def Xform "ship_grid_row_3_web"
+        {
+            quatf xformOp:orient = (1, 0, 0, 0)
+            double3 xformOp:translate = (0, 3.015000104904175, 0.11999999731779099)
+            uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient"]
+
+            def Mesh "Visual" (
+                prepend apiSchemas = ["MaterialBindingAPI"]
+            )
+            {
+                float3[] extent = [(-3.02, -0.005, -0.11), (3.02, 0.005, 0.11)]
+                int[] faceVertexCounts = [4, 4, 4, 4, 4, 4]
+                int[] faceVertexIndices = [0, 3, 2, 1, 4, 5, 6, 7, 0, 1, 5, 4, 1, 2, 6, 5, 2, 3, 7, 6, 3, 0, 4, 7]
+                rel material:binding = </ShipGrid/Looks/web>
+                point3f[] points = [(-3.02, -0.005, -0.11), (3.02, -0.005, -0.11), (3.02, 0.005, -0.11), (-3.02, 0.005, -0.11), (-3.02, -0.005, 0.11), (3.02, -0.005, 0.11), (3.02, 0.005, 0.11), (-3.02, 0.005, 0.11)]
+                color3f[] primvars:displayColor = [(0.18, 0.25, 0.23)]
+                texCoord2f[] primvars:st = [(0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1)] (
+                    interpolation = "faceVarying"
+                )
+                uniform token subdivisionScheme = "none"
+            }
+
+            def Cube "Collision" (
+                prepend apiSchemas = ["PhysicsCollisionAPI", "MaterialBindingAPI"]
+            )
+            {
+                rel material:binding:physics = </ShipGrid/Looks/SteelContact> (
+                    bindMaterialAs = "weakerThanDescendants"
+                )
+                bool physics:collisionEnabled = 1
+                double size = 1
+                token visibility = "invisible"
+                float3 xformOp:scale = (6.04, 0.01, 0.22)
+                uniform token[] xformOpOrder = ["xformOp:scale"]
+            }
+        }
+
+        def Xform "ship_grid_column_0_segment_0_web"
+        {
+            quatf xformOp:orient = (1, 0, 0, 0)
+            double3 xformOp:translate = (-3.015000104904175, -2.009999990463257, 0.11999999731779099)
+            uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient"]
+
+            def Mesh "Visual" (
+                prepend apiSchemas = ["MaterialBindingAPI"]
+            )
+            {
+                float3[] extent = [(-0.005, -1, -0.11), (0.005, 1, 0.11)]
+                int[] faceVertexCounts = [4, 4, 4, 4, 4, 4]
+                int[] faceVertexIndices = [0, 3, 2, 1, 4, 5, 6, 7, 0, 1, 5, 4, 1, 2, 6, 5, 2, 3, 7, 6, 3, 0, 4, 7]
+                rel material:binding = </ShipGrid/Looks/web>
+                point3f[] points = [(-0.005, -1, -0.11), (0.005, -1, -0.11), (0.005, 1, -0.11), (-0.005, 1, -0.11), (-0.005, -1, 0.11), (0.005, -1, 0.11), (0.005, 1, 0.11), (-0.005, 1, 0.11)]
+                color3f[] primvars:displayColor = [(0.18, 0.25, 0.23)]
+                texCoord2f[] primvars:st = [(0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1)] (
+                    interpolation = "faceVarying"
+                )
+                uniform token subdivisionScheme = "none"
+            }
+
+            def Cube "Collision" (
+                prepend apiSchemas = ["PhysicsCollisionAPI", "MaterialBindingAPI"]
+            )
+            {
+                rel material:binding:physics = </ShipGrid/Looks/SteelContact> (
+                    bindMaterialAs = "weakerThanDescendants"
+                )
+                bool physics:collisionEnabled = 1
+                double size = 1
+                token visibility = "invisible"
+                float3 xformOp:scale = (0.01, 2, 0.22)
+                uniform token[] xformOpOrder = ["xformOp:scale"]
+            }
+        }
+
+        def Xform "ship_grid_column_0_segment_1_web"
+        {
+            quatf xformOp:orient = (1, 0, 0, 0)
+            double3 xformOp:translate = (-3.015000104904175, 0, 0.11999999731779099)
+            uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient"]
+
+            def Mesh "Visual" (
+                prepend apiSchemas = ["MaterialBindingAPI"]
+            )
+            {
+                float3[] extent = [(-0.005, -1, -0.11), (0.005, 1, 0.11)]
+                int[] faceVertexCounts = [4, 4, 4, 4, 4, 4]
+                int[] faceVertexIndices = [0, 3, 2, 1, 4, 5, 6, 7, 0, 1, 5, 4, 1, 2, 6, 5, 2, 3, 7, 6, 3, 0, 4, 7]
+                rel material:binding = </ShipGrid/Looks/web>
+                point3f[] points = [(-0.005, -1, -0.11), (0.005, -1, -0.11), (0.005, 1, -0.11), (-0.005, 1, -0.11), (-0.005, -1, 0.11), (0.005, -1, 0.11), (0.005, 1, 0.11), (-0.005, 1, 0.11)]
+                color3f[] primvars:displayColor = [(0.18, 0.25, 0.23)]
+                texCoord2f[] primvars:st = [(0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1)] (
+                    interpolation = "faceVarying"
+                )
+                uniform token subdivisionScheme = "none"
+            }
+
+            def Cube "Collision" (
+                prepend apiSchemas = ["PhysicsCollisionAPI", "MaterialBindingAPI"]
+            )
+            {
+                rel material:binding:physics = </ShipGrid/Looks/SteelContact> (
+                    bindMaterialAs = "weakerThanDescendants"
+                )
+                bool physics:collisionEnabled = 1
+                double size = 1
+                token visibility = "invisible"
+                float3 xformOp:scale = (0.01, 2, 0.22)
+                uniform token[] xformOpOrder = ["xformOp:scale"]
+            }
+        }
+
+        def Xform "ship_grid_column_0_segment_2_web"
+        {
+            quatf xformOp:orient = (1, 0, 0, 0)
+            double3 xformOp:translate = (-3.015000104904175, 2.009999990463257, 0.11999999731779099)
+            uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient"]
+
+            def Mesh "Visual" (
+                prepend apiSchemas = ["MaterialBindingAPI"]
+            )
+            {
+                float3[] extent = [(-0.005, -1, -0.11), (0.005, 1, 0.11)]
+                int[] faceVertexCounts = [4, 4, 4, 4, 4, 4]
+                int[] faceVertexIndices = [0, 3, 2, 1, 4, 5, 6, 7, 0, 1, 5, 4, 1, 2, 6, 5, 2, 3, 7, 6, 3, 0, 4, 7]
+                rel material:binding = </ShipGrid/Looks/web>
+                point3f[] points = [(-0.005, -1, -0.11), (0.005, -1, -0.11), (0.005, 1, -0.11), (-0.005, 1, -0.11), (-0.005, -1, 0.11), (0.005, -1, 0.11), (0.005, 1, 0.11), (-0.005, 1, 0.11)]
+                color3f[] primvars:displayColor = [(0.18, 0.25, 0.23)]
+                texCoord2f[] primvars:st = [(0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1)] (
+                    interpolation = "faceVarying"
+                )
+                uniform token subdivisionScheme = "none"
+            }
+
+            def Cube "Collision" (
+                prepend apiSchemas = ["PhysicsCollisionAPI", "MaterialBindingAPI"]
+            )
+            {
+                rel material:binding:physics = </ShipGrid/Looks/SteelContact> (
+                    bindMaterialAs = "weakerThanDescendants"
+                )
+                bool physics:collisionEnabled = 1
+                double size = 1
+                token visibility = "invisible"
+                float3 xformOp:scale = (0.01, 2, 0.22)
+                uniform token[] xformOpOrder = ["xformOp:scale"]
+            }
+        }
+
+        def Xform "ship_grid_column_1_segment_0_web"
+        {
+            quatf xformOp:orient = (1, 0, 0, 0)
+            double3 xformOp:translate = (-1.0049999952316284, -2.009999990463257, 0.11999999731779099)
+            uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient"]
+
+            def Mesh "Visual" (
+                prepend apiSchemas = ["MaterialBindingAPI"]
+            )
+            {
+                float3[] extent = [(-0.005, -1, -0.11), (0.005, 1, 0.11)]
+                int[] faceVertexCounts = [4, 4, 4, 4, 4, 4]
+                int[] faceVertexIndices = [0, 3, 2, 1, 4, 5, 6, 7, 0, 1, 5, 4, 1, 2, 6, 5, 2, 3, 7, 6, 3, 0, 4, 7]
+                rel material:binding = </ShipGrid/Looks/web>
+                point3f[] points = [(-0.005, -1, -0.11), (0.005, -1, -0.11), (0.005, 1, -0.11), (-0.005, 1, -0.11), (-0.005, -1, 0.11), (0.005, -1, 0.11), (0.005, 1, 0.11), (-0.005, 1, 0.11)]
+                color3f[] primvars:displayColor = [(0.18, 0.25, 0.23)]
+                texCoord2f[] primvars:st = [(0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1)] (
+                    interpolation = "faceVarying"
+                )
+                uniform token subdivisionScheme = "none"
+            }
+
+            def Cube "Collision" (
+                prepend apiSchemas = ["PhysicsCollisionAPI", "MaterialBindingAPI"]
+            )
+            {
+                rel material:binding:physics = </ShipGrid/Looks/SteelContact> (
+                    bindMaterialAs = "weakerThanDescendants"
+                )
+                bool physics:collisionEnabled = 1
+                double size = 1
+                token visibility = "invisible"
+                float3 xformOp:scale = (0.01, 2, 0.22)
+                uniform token[] xformOpOrder = ["xformOp:scale"]
+            }
+        }
+
+        def Xform "ship_grid_column_1_segment_1_web"
+        {
+            quatf xformOp:orient = (1, 0, 0, 0)
+            double3 xformOp:translate = (-1.0049999952316284, 0, 0.11999999731779099)
+            uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient"]
+
+            def Mesh "Visual" (
+                prepend apiSchemas = ["MaterialBindingAPI"]
+            )
+            {
+                float3[] extent = [(-0.005, -1, -0.11), (0.005, 1, 0.11)]
+                int[] faceVertexCounts = [4, 4, 4, 4, 4, 4]
+                int[] faceVertexIndices = [0, 3, 2, 1, 4, 5, 6, 7, 0, 1, 5, 4, 1, 2, 6, 5, 2, 3, 7, 6, 3, 0, 4, 7]
+                rel material:binding = </ShipGrid/Looks/web>
+                point3f[] points = [(-0.005, -1, -0.11), (0.005, -1, -0.11), (0.005, 1, -0.11), (-0.005, 1, -0.11), (-0.005, -1, 0.11), (0.005, -1, 0.11), (0.005, 1, 0.11), (-0.005, 1, 0.11)]
+                color3f[] primvars:displayColor = [(0.18, 0.25, 0.23)]
+                texCoord2f[] primvars:st = [(0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1)] (
+                    interpolation = "faceVarying"
+                )
+                uniform token subdivisionScheme = "none"
+            }
+
+            def Cube "Collision" (
+                prepend apiSchemas = ["PhysicsCollisionAPI", "MaterialBindingAPI"]
+            )
+            {
+                rel material:binding:physics = </ShipGrid/Looks/SteelContact> (
+                    bindMaterialAs = "weakerThanDescendants"
+                )
+                bool physics:collisionEnabled = 1
+                double size = 1
+                token visibility = "invisible"
+                float3 xformOp:scale = (0.01, 2, 0.22)
+                uniform token[] xformOpOrder = ["xformOp:scale"]
+            }
+        }
+
+        def Xform "ship_grid_column_1_segment_2_web"
+        {
+            quatf xformOp:orient = (1, 0, 0, 0)
+            double3 xformOp:translate = (-1.0049999952316284, 2.009999990463257, 0.11999999731779099)
+            uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient"]
+
+            def Mesh "Visual" (
+                prepend apiSchemas = ["MaterialBindingAPI"]
+            )
+            {
+                float3[] extent = [(-0.005, -1, -0.11), (0.005, 1, 0.11)]
+                int[] faceVertexCounts = [4, 4, 4, 4, 4, 4]
+                int[] faceVertexIndices = [0, 3, 2, 1, 4, 5, 6, 7, 0, 1, 5, 4, 1, 2, 6, 5, 2, 3, 7, 6, 3, 0, 4, 7]
+                rel material:binding = </ShipGrid/Looks/web>
+                point3f[] points = [(-0.005, -1, -0.11), (0.005, -1, -0.11), (0.005, 1, -0.11), (-0.005, 1, -0.11), (-0.005, -1, 0.11), (0.005, -1, 0.11), (0.005, 1, 0.11), (-0.005, 1, 0.11)]
+                color3f[] primvars:displayColor = [(0.18, 0.25, 0.23)]
+                texCoord2f[] primvars:st = [(0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1)] (
+                    interpolation = "faceVarying"
+                )
+                uniform token subdivisionScheme = "none"
+            }
+
+            def Cube "Collision" (
+                prepend apiSchemas = ["PhysicsCollisionAPI", "MaterialBindingAPI"]
+            )
+            {
+                rel material:binding:physics = </ShipGrid/Looks/SteelContact> (
+                    bindMaterialAs = "weakerThanDescendants"
+                )
+                bool physics:collisionEnabled = 1
+                double size = 1
+                token visibility = "invisible"
+                float3 xformOp:scale = (0.01, 2, 0.22)
+                uniform token[] xformOpOrder = ["xformOp:scale"]
+            }
+        }
+
+        def Xform "ship_grid_column_2_segment_0_web"
+        {
+            quatf xformOp:orient = (1, 0, 0, 0)
+            double3 xformOp:translate = (1.0049999952316284, -2.009999990463257, 0.11999999731779099)
+            uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient"]
+
+            def Mesh "Visual" (
+                prepend apiSchemas = ["MaterialBindingAPI"]
+            )
+            {
+                float3[] extent = [(-0.005, -1, -0.11), (0.005, 1, 0.11)]
+                int[] faceVertexCounts = [4, 4, 4, 4, 4, 4]
+                int[] faceVertexIndices = [0, 3, 2, 1, 4, 5, 6, 7, 0, 1, 5, 4, 1, 2, 6, 5, 2, 3, 7, 6, 3, 0, 4, 7]
+                rel material:binding = </ShipGrid/Looks/web>
+                point3f[] points = [(-0.005, -1, -0.11), (0.005, -1, -0.11), (0.005, 1, -0.11), (-0.005, 1, -0.11), (-0.005, -1, 0.11), (0.005, -1, 0.11), (0.005, 1, 0.11), (-0.005, 1, 0.11)]
+                color3f[] primvars:displayColor = [(0.18, 0.25, 0.23)]
+                texCoord2f[] primvars:st = [(0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1)] (
+                    interpolation = "faceVarying"
+                )
+                uniform token subdivisionScheme = "none"
+            }
+
+            def Cube "Collision" (
+                prepend apiSchemas = ["PhysicsCollisionAPI", "MaterialBindingAPI"]
+            )
+            {
+                rel material:binding:physics = </ShipGrid/Looks/SteelContact> (
+                    bindMaterialAs = "weakerThanDescendants"
+                )
+                bool physics:collisionEnabled = 1
+                double size = 1
+                token visibility = "invisible"
+                float3 xformOp:scale = (0.01, 2, 0.22)
+                uniform token[] xformOpOrder = ["xformOp:scale"]
+            }
+        }
+
+        def Xform "ship_grid_column_2_segment_1_web"
+        {
+            quatf xformOp:orient = (1, 0, 0, 0)
+            double3 xformOp:translate = (1.0049999952316284, 0, 0.11999999731779099)
+            uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient"]
+
+            def Mesh "Visual" (
+                prepend apiSchemas = ["MaterialBindingAPI"]
+            )
+            {
+                float3[] extent = [(-0.005, -1, -0.11), (0.005, 1, 0.11)]
+                int[] faceVertexCounts = [4, 4, 4, 4, 4, 4]
+                int[] faceVertexIndices = [0, 3, 2, 1, 4, 5, 6, 7, 0, 1, 5, 4, 1, 2, 6, 5, 2, 3, 7, 6, 3, 0, 4, 7]
+                rel material:binding = </ShipGrid/Looks/web>
+                point3f[] points = [(-0.005, -1, -0.11), (0.005, -1, -0.11), (0.005, 1, -0.11), (-0.005, 1, -0.11), (-0.005, -1, 0.11), (0.005, -1, 0.11), (0.005, 1, 0.11), (-0.005, 1, 0.11)]
+                color3f[] primvars:displayColor = [(0.18, 0.25, 0.23)]
+                texCoord2f[] primvars:st = [(0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1)] (
+                    interpolation = "faceVarying"
+                )
+                uniform token subdivisionScheme = "none"
+            }
+
+            def Cube "Collision" (
+                prepend apiSchemas = ["PhysicsCollisionAPI", "MaterialBindingAPI"]
+            )
+            {
+                rel material:binding:physics = </ShipGrid/Looks/SteelContact> (
+                    bindMaterialAs = "weakerThanDescendants"
+                )
+                bool physics:collisionEnabled = 1
+                double size = 1
+                token visibility = "invisible"
+                float3 xformOp:scale = (0.01, 2, 0.22)
+                uniform token[] xformOpOrder = ["xformOp:scale"]
+            }
+        }
+
+        def Xform "ship_grid_column_2_segment_2_web"
+        {
+            quatf xformOp:orient = (1, 0, 0, 0)
+            double3 xformOp:translate = (1.0049999952316284, 2.009999990463257, 0.11999999731779099)
+            uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient"]
+
+            def Mesh "Visual" (
+                prepend apiSchemas = ["MaterialBindingAPI"]
+            )
+            {
+                float3[] extent = [(-0.005, -1, -0.11), (0.005, 1, 0.11)]
+                int[] faceVertexCounts = [4, 4, 4, 4, 4, 4]
+                int[] faceVertexIndices = [0, 3, 2, 1, 4, 5, 6, 7, 0, 1, 5, 4, 1, 2, 6, 5, 2, 3, 7, 6, 3, 0, 4, 7]
+                rel material:binding = </ShipGrid/Looks/web>
+                point3f[] points = [(-0.005, -1, -0.11), (0.005, -1, -0.11), (0.005, 1, -0.11), (-0.005, 1, -0.11), (-0.005, -1, 0.11), (0.005, -1, 0.11), (0.005, 1, 0.11), (-0.005, 1, 0.11)]
+                color3f[] primvars:displayColor = [(0.18, 0.25, 0.23)]
+                texCoord2f[] primvars:st = [(0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1)] (
+                    interpolation = "faceVarying"
+                )
+                uniform token subdivisionScheme = "none"
+            }
+
+            def Cube "Collision" (
+                prepend apiSchemas = ["PhysicsCollisionAPI", "MaterialBindingAPI"]
+            )
+            {
+                rel material:binding:physics = </ShipGrid/Looks/SteelContact> (
+                    bindMaterialAs = "weakerThanDescendants"
+                )
+                bool physics:collisionEnabled = 1
+                double size = 1
+                token visibility = "invisible"
+                float3 xformOp:scale = (0.01, 2, 0.22)
+                uniform token[] xformOpOrder = ["xformOp:scale"]
+            }
+        }
+
+        def Xform "ship_grid_column_3_segment_0_web"
+        {
+            quatf xformOp:orient = (1, 0, 0, 0)
+            double3 xformOp:translate = (3.015000104904175, -2.009999990463257, 0.11999999731779099)
+            uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient"]
+
+            def Mesh "Visual" (
+                prepend apiSchemas = ["MaterialBindingAPI"]
+            )
+            {
+                float3[] extent = [(-0.005, -1, -0.11), (0.005, 1, 0.11)]
+                int[] faceVertexCounts = [4, 4, 4, 4, 4, 4]
+                int[] faceVertexIndices = [0, 3, 2, 1, 4, 5, 6, 7, 0, 1, 5, 4, 1, 2, 6, 5, 2, 3, 7, 6, 3, 0, 4, 7]
+                rel material:binding = </ShipGrid/Looks/web>
+                point3f[] points = [(-0.005, -1, -0.11), (0.005, -1, -0.11), (0.005, 1, -0.11), (-0.005, 1, -0.11), (-0.005, -1, 0.11), (0.005, -1, 0.11), (0.005, 1, 0.11), (-0.005, 1, 0.11)]
+                color3f[] primvars:displayColor = [(0.18, 0.25, 0.23)]
+                texCoord2f[] primvars:st = [(0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1)] (
+                    interpolation = "faceVarying"
+                )
+                uniform token subdivisionScheme = "none"
+            }
+
+            def Cube "Collision" (
+                prepend apiSchemas = ["PhysicsCollisionAPI", "MaterialBindingAPI"]
+            )
+            {
+                rel material:binding:physics = </ShipGrid/Looks/SteelContact> (
+                    bindMaterialAs = "weakerThanDescendants"
+                )
+                bool physics:collisionEnabled = 1
+                double size = 1
+                token visibility = "invisible"
+                float3 xformOp:scale = (0.01, 2, 0.22)
+                uniform token[] xformOpOrder = ["xformOp:scale"]
+            }
+        }
+
+        def Xform "ship_grid_column_3_segment_1_web"
+        {
+            quatf xformOp:orient = (1, 0, 0, 0)
+            double3 xformOp:translate = (3.015000104904175, 0, 0.11999999731779099)
+            uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient"]
+
+            def Mesh "Visual" (
+                prepend apiSchemas = ["MaterialBindingAPI"]
+            )
+            {
+                float3[] extent = [(-0.005, -1, -0.11), (0.005, 1, 0.11)]
+                int[] faceVertexCounts = [4, 4, 4, 4, 4, 4]
+                int[] faceVertexIndices = [0, 3, 2, 1, 4, 5, 6, 7, 0, 1, 5, 4, 1, 2, 6, 5, 2, 3, 7, 6, 3, 0, 4, 7]
+                rel material:binding = </ShipGrid/Looks/web>
+                point3f[] points = [(-0.005, -1, -0.11), (0.005, -1, -0.11), (0.005, 1, -0.11), (-0.005, 1, -0.11), (-0.005, -1, 0.11), (0.005, -1, 0.11), (0.005, 1, 0.11), (-0.005, 1, 0.11)]
+                color3f[] primvars:displayColor = [(0.18, 0.25, 0.23)]
+                texCoord2f[] primvars:st = [(0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1)] (
+                    interpolation = "faceVarying"
+                )
+                uniform token subdivisionScheme = "none"
+            }
+
+            def Cube "Collision" (
+                prepend apiSchemas = ["PhysicsCollisionAPI", "MaterialBindingAPI"]
+            )
+            {
+                rel material:binding:physics = </ShipGrid/Looks/SteelContact> (
+                    bindMaterialAs = "weakerThanDescendants"
+                )
+                bool physics:collisionEnabled = 1
+                double size = 1
+                token visibility = "invisible"
+                float3 xformOp:scale = (0.01, 2, 0.22)
+                uniform token[] xformOpOrder = ["xformOp:scale"]
+            }
+        }
+
+        def Xform "ship_grid_column_3_segment_2_web"
+        {
+            quatf xformOp:orient = (1, 0, 0, 0)
+            double3 xformOp:translate = (3.015000104904175, 2.009999990463257, 0.11999999731779099)
+            uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient"]
+
+            def Mesh "Visual" (
+                prepend apiSchemas = ["MaterialBindingAPI"]
+            )
+            {
+                float3[] extent = [(-0.005, -1, -0.11), (0.005, 1, 0.11)]
+                int[] faceVertexCounts = [4, 4, 4, 4, 4, 4]
+                int[] faceVertexIndices = [0, 3, 2, 1, 4, 5, 6, 7, 0, 1, 5, 4, 1, 2, 6, 5, 2, 3, 7, 6, 3, 0, 4, 7]
+                rel material:binding = </ShipGrid/Looks/web>
+                point3f[] points = [(-0.005, -1, -0.11), (0.005, -1, -0.11), (0.005, 1, -0.11), (-0.005, 1, -0.11), (-0.005, -1, 0.11), (0.005, -1, 0.11), (0.005, 1, 0.11), (-0.005, 1, 0.11)]
+                color3f[] primvars:displayColor = [(0.18, 0.25, 0.23)]
+                texCoord2f[] primvars:st = [(0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1)] (
+                    interpolation = "faceVarying"
+                )
+                uniform token subdivisionScheme = "none"
+            }
+
+            def Cube "Collision" (
+                prepend apiSchemas = ["PhysicsCollisionAPI", "MaterialBindingAPI"]
+            )
+            {
+                rel material:binding:physics = </ShipGrid/Looks/SteelContact> (
+                    bindMaterialAs = "weakerThanDescendants"
+                )
+                bool physics:collisionEnabled = 1
+                double size = 1
+                token visibility = "invisible"
+                float3 xformOp:scale = (0.01, 2, 0.22)
+                uniform token[] xformOpOrder = ["xformOp:scale"]
+            }
+        }
+
+        def Xform "ship_grid_row_0_cut"
+        {
+            quatf xformOp:orient = (1, 0, 0, 0)
+            double3 xformOp:translate = (0, -3.015000104904175, 0.23000000417232513)
+            uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient"]
+
+            def Mesh "Visual" (
+                prepend apiSchemas = ["MaterialBindingAPI"]
+            )
+            {
+                float3[] extent = [(-3.02, -0.005, -0.00001), (3.02, 0.005, 0.00001)]
+                int[] faceVertexCounts = [4, 4, 4, 4, 4, 4]
+                int[] faceVertexIndices = [0, 3, 2, 1, 4, 5, 6, 7, 0, 1, 5, 4, 1, 2, 6, 5, 2, 3, 7, 6, 3, 0, 4, 7]
+                rel material:binding = </ShipGrid/Looks/cut>
+                point3f[] points = [(-3.02, -0.005, -0.00001), (3.02, -0.005, -0.00001), (3.02, 0.005, -0.00001), (-3.02, 0.005, -0.00001), (-3.02, -0.005, 0.00001), (3.02, -0.005, 0.00001), (3.02, 0.005, 0.00001), (-3.02, 0.005, 0.00001)]
+                color3f[] primvars:displayColor = [(0.68, 0.76, 0.75)]
+                texCoord2f[] primvars:st = [(0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1)] (
+                    interpolation = "faceVarying"
+                )
+                uniform token subdivisionScheme = "none"
+            }
+        }
+
+        def Xform "ship_grid_row_1_cut"
+        {
+            quatf xformOp:orient = (1, 0, 0, 0)
+            double3 xformOp:translate = (0, -1.0049999952316284, 0.23000000417232513)
+            uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient"]
+
+            def Mesh "Visual" (
+                prepend apiSchemas = ["MaterialBindingAPI"]
+            )
+            {
+                float3[] extent = [(-3.02, -0.005, -0.00001), (3.02, 0.005, 0.00001)]
+                int[] faceVertexCounts = [4, 4, 4, 4, 4, 4]
+                int[] faceVertexIndices = [0, 3, 2, 1, 4, 5, 6, 7, 0, 1, 5, 4, 1, 2, 6, 5, 2, 3, 7, 6, 3, 0, 4, 7]
+                rel material:binding = </ShipGrid/Looks/cut>
+                point3f[] points = [(-3.02, -0.005, -0.00001), (3.02, -0.005, -0.00001), (3.02, 0.005, -0.00001), (-3.02, 0.005, -0.00001), (-3.02, -0.005, 0.00001), (3.02, -0.005, 0.00001), (3.02, 0.005, 0.00001), (-3.02, 0.005, 0.00001)]
+                color3f[] primvars:displayColor = [(0.68, 0.76, 0.75)]
+                texCoord2f[] primvars:st = [(0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1)] (
+                    interpolation = "faceVarying"
+                )
+                uniform token subdivisionScheme = "none"
+            }
+        }
+
+        def Xform "ship_grid_row_2_cut"
+        {
+            quatf xformOp:orient = (1, 0, 0, 0)
+            double3 xformOp:translate = (0, 1.0049999952316284, 0.23000000417232513)
+            uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient"]
+
+            def Mesh "Visual" (
+                prepend apiSchemas = ["MaterialBindingAPI"]
+            )
+            {
+                float3[] extent = [(-3.02, -0.005, -0.00001), (3.02, 0.005, 0.00001)]
+                int[] faceVertexCounts = [4, 4, 4, 4, 4, 4]
+                int[] faceVertexIndices = [0, 3, 2, 1, 4, 5, 6, 7, 0, 1, 5, 4, 1, 2, 6, 5, 2, 3, 7, 6, 3, 0, 4, 7]
+                rel material:binding = </ShipGrid/Looks/cut>
+                point3f[] points = [(-3.02, -0.005, -0.00001), (3.02, -0.005, -0.00001), (3.02, 0.005, -0.00001), (-3.02, 0.005, -0.00001), (-3.02, -0.005, 0.00001), (3.02, -0.005, 0.00001), (3.02, 0.005, 0.00001), (-3.02, 0.005, 0.00001)]
+                color3f[] primvars:displayColor = [(0.68, 0.76, 0.75)]
+                texCoord2f[] primvars:st = [(0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1)] (
+                    interpolation = "faceVarying"
+                )
+                uniform token subdivisionScheme = "none"
+            }
+        }
+
+        def Xform "ship_grid_row_3_cut"
+        {
+            quatf xformOp:orient = (1, 0, 0, 0)
+            double3 xformOp:translate = (0, 3.015000104904175, 0.23000000417232513)
+            uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient"]
+
+            def Mesh "Visual" (
+                prepend apiSchemas = ["MaterialBindingAPI"]
+            )
+            {
+                float3[] extent = [(-3.02, -0.005, -0.00001), (3.02, 0.005, 0.00001)]
+                int[] faceVertexCounts = [4, 4, 4, 4, 4, 4]
+                int[] faceVertexIndices = [0, 3, 2, 1, 4, 5, 6, 7, 0, 1, 5, 4, 1, 2, 6, 5, 2, 3, 7, 6, 3, 0, 4, 7]
+                rel material:binding = </ShipGrid/Looks/cut>
+                point3f[] points = [(-3.02, -0.005, -0.00001), (3.02, -0.005, -0.00001), (3.02, 0.005, -0.00001), (-3.02, 0.005, -0.00001), (-3.02, -0.005, 0.00001), (3.02, -0.005, 0.00001), (3.02, 0.005, 0.00001), (-3.02, 0.005, 0.00001)]
+                color3f[] primvars:displayColor = [(0.68, 0.76, 0.75)]
+                texCoord2f[] primvars:st = [(0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1)] (
+                    interpolation = "faceVarying"
+                )
+                uniform token subdivisionScheme = "none"
+            }
+        }
+
+        def Xform "ship_grid_column_0_segment_0_cut"
+        {
+            quatf xformOp:orient = (1, 0, 0, 0)
+            double3 xformOp:translate = (-3.015000104904175, -2.009999990463257, 0.23000000417232513)
+            uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient"]
+
+            def Mesh "Visual" (
+                prepend apiSchemas = ["MaterialBindingAPI"]
+            )
+            {
+                float3[] extent = [(-0.005, -1, -0.00001), (0.005, 1, 0.00001)]
+                int[] faceVertexCounts = [4, 4, 4, 4, 4, 4]
+                int[] faceVertexIndices = [0, 3, 2, 1, 4, 5, 6, 7, 0, 1, 5, 4, 1, 2, 6, 5, 2, 3, 7, 6, 3, 0, 4, 7]
+                rel material:binding = </ShipGrid/Looks/cut>
+                point3f[] points = [(-0.005, -1, -0.00001), (0.005, -1, -0.00001), (0.005, 1, -0.00001), (-0.005, 1, -0.00001), (-0.005, -1, 0.00001), (0.005, -1, 0.00001), (0.005, 1, 0.00001), (-0.005, 1, 0.00001)]
+                color3f[] primvars:displayColor = [(0.68, 0.76, 0.75)]
+                texCoord2f[] primvars:st = [(0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1)] (
+                    interpolation = "faceVarying"
+                )
+                uniform token subdivisionScheme = "none"
+            }
+        }
+
+        def Xform "ship_grid_column_0_segment_1_cut"
+        {
+            quatf xformOp:orient = (1, 0, 0, 0)
+            double3 xformOp:translate = (-3.015000104904175, 0, 0.23000000417232513)
+            uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient"]
+
+            def Mesh "Visual" (
+                prepend apiSchemas = ["MaterialBindingAPI"]
+            )
+            {
+                float3[] extent = [(-0.005, -1, -0.00001), (0.005, 1, 0.00001)]
+                int[] faceVertexCounts = [4, 4, 4, 4, 4, 4]
+                int[] faceVertexIndices = [0, 3, 2, 1, 4, 5, 6, 7, 0, 1, 5, 4, 1, 2, 6, 5, 2, 3, 7, 6, 3, 0, 4, 7]
+                rel material:binding = </ShipGrid/Looks/cut>
+                point3f[] points = [(-0.005, -1, -0.00001), (0.005, -1, -0.00001), (0.005, 1, -0.00001), (-0.005, 1, -0.00001), (-0.005, -1, 0.00001), (0.005, -1, 0.00001), (0.005, 1, 0.00001), (-0.005, 1, 0.00001)]
+                color3f[] primvars:displayColor = [(0.68, 0.76, 0.75)]
+                texCoord2f[] primvars:st = [(0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1)] (
+                    interpolation = "faceVarying"
+                )
+                uniform token subdivisionScheme = "none"
+            }
+        }
+
+        def Xform "ship_grid_column_0_segment_2_cut"
+        {
+            quatf xformOp:orient = (1, 0, 0, 0)
+            double3 xformOp:translate = (-3.015000104904175, 2.009999990463257, 0.23000000417232513)
+            uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient"]
+
+            def Mesh "Visual" (
+                prepend apiSchemas = ["MaterialBindingAPI"]
+            )
+            {
+                float3[] extent = [(-0.005, -1, -0.00001), (0.005, 1, 0.00001)]
+                int[] faceVertexCounts = [4, 4, 4, 4, 4, 4]
+                int[] faceVertexIndices = [0, 3, 2, 1, 4, 5, 6, 7, 0, 1, 5, 4, 1, 2, 6, 5, 2, 3, 7, 6, 3, 0, 4, 7]
+                rel material:binding = </ShipGrid/Looks/cut>
+                point3f[] points = [(-0.005, -1, -0.00001), (0.005, -1, -0.00001), (0.005, 1, -0.00001), (-0.005, 1, -0.00001), (-0.005, -1, 0.00001), (0.005, -1, 0.00001), (0.005, 1, 0.00001), (-0.005, 1, 0.00001)]
+                color3f[] primvars:displayColor = [(0.68, 0.76, 0.75)]
+                texCoord2f[] primvars:st = [(0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1)] (
+                    interpolation = "faceVarying"
+                )
+                uniform token subdivisionScheme = "none"
+            }
+        }
+
+        def Xform "ship_grid_column_1_segment_0_cut"
+        {
+            quatf xformOp:orient = (1, 0, 0, 0)
+            double3 xformOp:translate = (-1.0049999952316284, -2.009999990463257, 0.23000000417232513)
+            uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient"]
+
+            def Mesh "Visual" (
+                prepend apiSchemas = ["MaterialBindingAPI"]
+            )
+            {
+                float3[] extent = [(-0.005, -1, -0.00001), (0.005, 1, 0.00001)]
+                int[] faceVertexCounts = [4, 4, 4, 4, 4, 4]
+                int[] faceVertexIndices = [0, 3, 2, 1, 4, 5, 6, 7, 0, 1, 5, 4, 1, 2, 6, 5, 2, 3, 7, 6, 3, 0, 4, 7]
+                rel material:binding = </ShipGrid/Looks/cut>
+                point3f[] points = [(-0.005, -1, -0.00001), (0.005, -1, -0.00001), (0.005, 1, -0.00001), (-0.005, 1, -0.00001), (-0.005, -1, 0.00001), (0.005, -1, 0.00001), (0.005, 1, 0.00001), (-0.005, 1, 0.00001)]
+                color3f[] primvars:displayColor = [(0.68, 0.76, 0.75)]
+                texCoord2f[] primvars:st = [(0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1)] (
+                    interpolation = "faceVarying"
+                )
+                uniform token subdivisionScheme = "none"
+            }
+        }
+
+        def Xform "ship_grid_column_1_segment_1_cut"
+        {
+            quatf xformOp:orient = (1, 0, 0, 0)
+            double3 xformOp:translate = (-1.0049999952316284, 0, 0.23000000417232513)
+            uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient"]
+
+            def Mesh "Visual" (
+                prepend apiSchemas = ["MaterialBindingAPI"]
+            )
+            {
+                float3[] extent = [(-0.005, -1, -0.00001), (0.005, 1, 0.00001)]
+                int[] faceVertexCounts = [4, 4, 4, 4, 4, 4]
+                int[] faceVertexIndices = [0, 3, 2, 1, 4, 5, 6, 7, 0, 1, 5, 4, 1, 2, 6, 5, 2, 3, 7, 6, 3, 0, 4, 7]
+                rel material:binding = </ShipGrid/Looks/cut>
+                point3f[] points = [(-0.005, -1, -0.00001), (0.005, -1, -0.00001), (0.005, 1, -0.00001), (-0.005, 1, -0.00001), (-0.005, -1, 0.00001), (0.005, -1, 0.00001), (0.005, 1, 0.00001), (-0.005, 1, 0.00001)]
+                color3f[] primvars:displayColor = [(0.68, 0.76, 0.75)]
+                texCoord2f[] primvars:st = [(0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1)] (
+                    interpolation = "faceVarying"
+                )
+                uniform token subdivisionScheme = "none"
+            }
+        }
+
+        def Xform "ship_grid_column_1_segment_2_cut"
+        {
+            quatf xformOp:orient = (1, 0, 0, 0)
+            double3 xformOp:translate = (-1.0049999952316284, 2.009999990463257, 0.23000000417232513)
+            uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient"]
+
+            def Mesh "Visual" (
+                prepend apiSchemas = ["MaterialBindingAPI"]
+            )
+            {
+                float3[] extent = [(-0.005, -1, -0.00001), (0.005, 1, 0.00001)]
+                int[] faceVertexCounts = [4, 4, 4, 4, 4, 4]
+                int[] faceVertexIndices = [0, 3, 2, 1, 4, 5, 6, 7, 0, 1, 5, 4, 1, 2, 6, 5, 2, 3, 7, 6, 3, 0, 4, 7]
+                rel material:binding = </ShipGrid/Looks/cut>
+                point3f[] points = [(-0.005, -1, -0.00001), (0.005, -1, -0.00001), (0.005, 1, -0.00001), (-0.005, 1, -0.00001), (-0.005, -1, 0.00001), (0.005, -1, 0.00001), (0.005, 1, 0.00001), (-0.005, 1, 0.00001)]
+                color3f[] primvars:displayColor = [(0.68, 0.76, 0.75)]
+                texCoord2f[] primvars:st = [(0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1)] (
+                    interpolation = "faceVarying"
+                )
+                uniform token subdivisionScheme = "none"
+            }
+        }
+
+        def Xform "ship_grid_column_2_segment_0_cut"
+        {
+            quatf xformOp:orient = (1, 0, 0, 0)
+            double3 xformOp:translate = (1.0049999952316284, -2.009999990463257, 0.23000000417232513)
+            uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient"]
+
+            def Mesh "Visual" (
+                prepend apiSchemas = ["MaterialBindingAPI"]
+            )
+            {
+                float3[] extent = [(-0.005, -1, -0.00001), (0.005, 1, 0.00001)]
+                int[] faceVertexCounts = [4, 4, 4, 4, 4, 4]
+                int[] faceVertexIndices = [0, 3, 2, 1, 4, 5, 6, 7, 0, 1, 5, 4, 1, 2, 6, 5, 2, 3, 7, 6, 3, 0, 4, 7]
+                rel material:binding = </ShipGrid/Looks/cut>
+                point3f[] points = [(-0.005, -1, -0.00001), (0.005, -1, -0.00001), (0.005, 1, -0.00001), (-0.005, 1, -0.00001), (-0.005, -1, 0.00001), (0.005, -1, 0.00001), (0.005, 1, 0.00001), (-0.005, 1, 0.00001)]
+                color3f[] primvars:displayColor = [(0.68, 0.76, 0.75)]
+                texCoord2f[] primvars:st = [(0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1)] (
+                    interpolation = "faceVarying"
+                )
+                uniform token subdivisionScheme = "none"
+            }
+        }
+
+        def Xform "ship_grid_column_2_segment_1_cut"
+        {
+            quatf xformOp:orient = (1, 0, 0, 0)
+            double3 xformOp:translate = (1.0049999952316284, 0, 0.23000000417232513)
+            uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient"]
+
+            def Mesh "Visual" (
+                prepend apiSchemas = ["MaterialBindingAPI"]
+            )
+            {
+                float3[] extent = [(-0.005, -1, -0.00001), (0.005, 1, 0.00001)]
+                int[] faceVertexCounts = [4, 4, 4, 4, 4, 4]
+                int[] faceVertexIndices = [0, 3, 2, 1, 4, 5, 6, 7, 0, 1, 5, 4, 1, 2, 6, 5, 2, 3, 7, 6, 3, 0, 4, 7]
+                rel material:binding = </ShipGrid/Looks/cut>
+                point3f[] points = [(-0.005, -1, -0.00001), (0.005, -1, -0.00001), (0.005, 1, -0.00001), (-0.005, 1, -0.00001), (-0.005, -1, 0.00001), (0.005, -1, 0.00001), (0.005, 1, 0.00001), (-0.005, 1, 0.00001)]
+                color3f[] primvars:displayColor = [(0.68, 0.76, 0.75)]
+                texCoord2f[] primvars:st = [(0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1)] (
+                    interpolation = "faceVarying"
+                )
+                uniform token subdivisionScheme = "none"
+            }
+        }
+
+        def Xform "ship_grid_column_2_segment_2_cut"
+        {
+            quatf xformOp:orient = (1, 0, 0, 0)
+            double3 xformOp:translate = (1.0049999952316284, 2.009999990463257, 0.23000000417232513)
+            uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient"]
+
+            def Mesh "Visual" (
+                prepend apiSchemas = ["MaterialBindingAPI"]
+            )
+            {
+                float3[] extent = [(-0.005, -1, -0.00001), (0.005, 1, 0.00001)]
+                int[] faceVertexCounts = [4, 4, 4, 4, 4, 4]
+                int[] faceVertexIndices = [0, 3, 2, 1, 4, 5, 6, 7, 0, 1, 5, 4, 1, 2, 6, 5, 2, 3, 7, 6, 3, 0, 4, 7]
+                rel material:binding = </ShipGrid/Looks/cut>
+                point3f[] points = [(-0.005, -1, -0.00001), (0.005, -1, -0.00001), (0.005, 1, -0.00001), (-0.005, 1, -0.00001), (-0.005, -1, 0.00001), (0.005, -1, 0.00001), (0.005, 1, 0.00001), (-0.005, 1, 0.00001)]
+                color3f[] primvars:displayColor = [(0.68, 0.76, 0.75)]
+                texCoord2f[] primvars:st = [(0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1)] (
+                    interpolation = "faceVarying"
+                )
+                uniform token subdivisionScheme = "none"
+            }
+        }
+
+        def Xform "ship_grid_column_3_segment_0_cut"
+        {
+            quatf xformOp:orient = (1, 0, 0, 0)
+            double3 xformOp:translate = (3.015000104904175, -2.009999990463257, 0.23000000417232513)
+            uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient"]
+
+            def Mesh "Visual" (
+                prepend apiSchemas = ["MaterialBindingAPI"]
+            )
+            {
+                float3[] extent = [(-0.005, -1, -0.00001), (0.005, 1, 0.00001)]
+                int[] faceVertexCounts = [4, 4, 4, 4, 4, 4]
+                int[] faceVertexIndices = [0, 3, 2, 1, 4, 5, 6, 7, 0, 1, 5, 4, 1, 2, 6, 5, 2, 3, 7, 6, 3, 0, 4, 7]
+                rel material:binding = </ShipGrid/Looks/cut>
+                point3f[] points = [(-0.005, -1, -0.00001), (0.005, -1, -0.00001), (0.005, 1, -0.00001), (-0.005, 1, -0.00001), (-0.005, -1, 0.00001), (0.005, -1, 0.00001), (0.005, 1, 0.00001), (-0.005, 1, 0.00001)]
+                color3f[] primvars:displayColor = [(0.68, 0.76, 0.75)]
+                texCoord2f[] primvars:st = [(0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1)] (
+                    interpolation = "faceVarying"
+                )
+                uniform token subdivisionScheme = "none"
+            }
+        }
+
+        def Xform "ship_grid_column_3_segment_1_cut"
+        {
+            quatf xformOp:orient = (1, 0, 0, 0)
+            double3 xformOp:translate = (3.015000104904175, 0, 0.23000000417232513)
+            uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient"]
+
+            def Mesh "Visual" (
+                prepend apiSchemas = ["MaterialBindingAPI"]
+            )
+            {
+                float3[] extent = [(-0.005, -1, -0.00001), (0.005, 1, 0.00001)]
+                int[] faceVertexCounts = [4, 4, 4, 4, 4, 4]
+                int[] faceVertexIndices = [0, 3, 2, 1, 4, 5, 6, 7, 0, 1, 5, 4, 1, 2, 6, 5, 2, 3, 7, 6, 3, 0, 4, 7]
+                rel material:binding = </ShipGrid/Looks/cut>
+                point3f[] points = [(-0.005, -1, -0.00001), (0.005, -1, -0.00001), (0.005, 1, -0.00001), (-0.005, 1, -0.00001), (-0.005, -1, 0.00001), (0.005, -1, 0.00001), (0.005, 1, 0.00001), (-0.005, 1, 0.00001)]
+                color3f[] primvars:displayColor = [(0.68, 0.76, 0.75)]
+                texCoord2f[] primvars:st = [(0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1)] (
+                    interpolation = "faceVarying"
+                )
+                uniform token subdivisionScheme = "none"
+            }
+        }
+
+        def Xform "ship_grid_column_3_segment_2_cut"
+        {
+            quatf xformOp:orient = (1, 0, 0, 0)
+            double3 xformOp:translate = (3.015000104904175, 2.009999990463257, 0.23000000417232513)
+            uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient"]
+
+            def Mesh "Visual" (
+                prepend apiSchemas = ["MaterialBindingAPI"]
+            )
+            {
+                float3[] extent = [(-0.005, -1, -0.00001), (0.005, 1, 0.00001)]
+                int[] faceVertexCounts = [4, 4, 4, 4, 4, 4]
+                int[] faceVertexIndices = [0, 3, 2, 1, 4, 5, 6, 7, 0, 1, 5, 4, 1, 2, 6, 5, 2, 3, 7, 6, 3, 0, 4, 7]
+                rel material:binding = </ShipGrid/Looks/cut>
+                point3f[] points = [(-0.005, -1, -0.00001), (0.005, -1, -0.00001), (0.005, 1, -0.00001), (-0.005, 1, -0.00001), (-0.005, -1, 0.00001), (0.005, -1, 0.00001), (0.005, 1, 0.00001), (-0.005, 1, 0.00001)]
+                color3f[] primvars:displayColor = [(0.68, 0.76, 0.75)]
+                texCoord2f[] primvars:st = [(0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1)] (
+                    interpolation = "faceVarying"
+                )
+                uniform token subdivisionScheme = "none"
+            }
+        }
+
+        def Xform "yard_floor"
+        {
+            quatf xformOp:orient = (1, 0, 0, 0)
+            double3 xformOp:translate = (0, 0, -0.029999999329447746)
+            uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient"]
+
+            def Mesh "Visual" (
+                prepend apiSchemas = ["MaterialBindingAPI"]
+            )
+            {
+                float3[] extent = [(-7.225, -7.225, -0.02), (7.225, 7.225, 0.02)]
+                int[] faceVertexCounts = [4, 4, 4, 4, 4, 4]
+                int[] faceVertexIndices = [0, 3, 2, 1, 4, 5, 6, 7, 0, 1, 5, 4, 1, 2, 6, 5, 2, 3, 7, 6, 3, 0, 4, 7]
+                rel material:binding = </ShipGrid/Looks/surround>
+                point3f[] points = [(-7.225, -7.225, -0.02), (7.225, -7.225, -0.02), (7.225, 7.225, -0.02), (-7.225, 7.225, -0.02), (-7.225, -7.225, 0.02), (7.225, -7.225, 0.02), (7.225, 7.225, 0.02), (-7.225, 7.225, 0.02)]
+                color3f[] primvars:displayColor = [(0.22, 0.25, 0.28)]
+                texCoord2f[] primvars:st = [(0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1)] (
+                    interpolation = "faceVarying"
+                )
+                uniform token subdivisionScheme = "none"
+            }
+        }
+    }
+}
