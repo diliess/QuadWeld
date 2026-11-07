@@ -9,4 +9,8 @@ opencv-python==4.11.0.86
 setuptools==80.9.0
 # Required by DA3's model/output code but absent from upstream dependencies.
 addict==2.4.0
+# Geometry postprocessing and result figures run in the DA3 environment.
+matplotlib>=3.8,<4
+pillow>=10.2,<13
+scipy>=1.13,<2
 -e ./thirdparty/depth-anything-3

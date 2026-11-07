@@ -1,0 +1,781 @@
+{
+  "stage": "industrial_welding.usdc",
+  "stage_sha256": "7553a8b6bbca45ce755b93ff211e9c8379bb3983ff908ceaf109818575195036",
+  "units": "m",
+  "up_axis": "Z",
+  "counts": {
+    "fixtures": 32,
+    "fixture_parts": 1124,
+    "surface_preparation_patches": 12,
+    "fixture_colliders": 1087,
+    "robot_bodies": 24,
+    "robot_geoms": 203,
+    "robot_colliders": 68,
+    "revolute_joints": 18,
+    "fixed_joints": 5,
+    "seams": 317
+  },
+  "robot_mass_kg": 97.74102053281072,
+  "bodies": [
+    {
+      "name": "base_link",
+      "path": "/World/Robot/base_link",
+      "position_m": [
+        0.0,
+        0.0,
+        0.522967966569944
+      ],
+      "quat_xyzw": [
+        -1.798790298989591e-05,
+        -0.010027316955097721,
+        0.0,
+        0.9999497250317726
+      ],
+      "mass_kg": 41.437
+    },
+    {
+      "name": "front_d435i",
+      "path": "/World/Robot/front_d435i",
+      "position_m": [
+        0.41147150039821406,
+        0.024998862953986165,
+        0.5788798062825703
+      ],
+      "quat_xyzw": [
+        -0.650539692729237,
+        0.6505323677177236,
+        -0.2771455521979281,
+        0.2771210739590697
+      ],
+      "mass_kg": 0.0923
+    },
+    {
+      "name": "rear_d435i",
+      "path": "/World/Robot/rear_d435i",
+      "position_m": [
+        -0.40851649567511933,
+        -0.024999252852599234,
+        0.5396409818680876
+      ],
+      "quat_xyzw": [
+        -0.6559003859665017,
+        -0.6558930340752248,
+        0.2642082201057178,
+        0.26418370117999135
+      ],
+      "mass_kg": 0.0923
+    },
+    {
+      "name": "FL_hip",
+      "path": "/World/Robot/FL_hip",
+      "position_m": [
+        0.32843396653828444,
+        0.07200011845676256,
+        0.5295529924727997
+      ],
+      "quat_xyzw": [
+        0.049958691146736095,
+        -0.010014785419966709,
+        0.0005011569714295719,
+        0.9987009472778061
+      ],
+      "mass_kg": 2.9464
+    },
+    {
+      "name": "FL_thigh",
+      "path": "/World/Robot/FL_thigh",
+      "position_m": [
+        0.32819430742399025,
+        0.1911323970875743,
+        0.541499358101709
+      ],
+      "quat_xyzw": [
+        0.045819842009645353,
+        0.3796882391373621,
+        0.019916426828528223,
+        0.9237644283481393
+      ],
+      "mass_kg": 4.8094
+    },
+    {
+      "name": "FL_calf",
+      "path": "/World/Robot/FL_calf",
+      "position_m": [
+        0.08203594184110533,
+        0.21538114232294986,
+        0.2938745108543277
+      ],
+      "quat_xyzw": [
+        0.04710167685950803,
+        -0.3518599812737805,
+        -0.0166599524737457,
+        0.9347183702049565
+      ],
+      "mass_kg": 0.53
+    },
+    {
+      "name": "FR_hip",
+      "path": "/World/Robot/FR_hip",
+      "position_m": [
+        0.3284339145916079,
+        -0.07199988145005086,
+        0.5295581727284105
+      ],
+      "quat_xyzw": [
+        -0.049994621992326335,
+        -0.010014785419966709,
+        -0.0005011569714295719,
+        0.9986991492369095
+      ],
+      "mass_kg": 2.9464
+    },
+    {
+      "name": "FR_thigh",
+      "path": "/World/Robot/FR_thigh",
+      "position_m": [
+        0.3281941695258747,
+        -0.19113130008252788,
+        0.5415131096549268
+      ],
+      "quat_xyzw": [
+        -0.04585293651000007,
+        0.3796875389472567,
+        -0.019930418958855722,
+        0.9237627722428038
+      ],
+      "mass_kg": 4.8094
+    },
+    {
+      "name": "FR_calf",
+      "path": "/World/Robot/FR_calf",
+      "position_m": [
+        0.08203578644560769,
+        -0.21539768177755783,
+        0.29389000749096494
+      ],
+      "quat_xyzw": [
+        -0.04713542931540504,
+        -0.35185936472949925,
+        0.016672273081918612,
+        0.9347166811744017
+      ],
+      "mass_kg": 0.53
+    },
+    {
+      "name": "RL_hip",
+      "path": "/World/Robot/RL_hip",
+      "position_m": [
+        -0.3284339145916079,
+        0.07199988145005086,
+        0.5163777604114775
+      ],
+      "quat_xyzw": [
+        0.049958691146736095,
+        -0.010014785419966709,
+        0.0005011569714295719,
+        0.9987009472778061
+      ],
+      "mass_kg": 2.9464
+    },
+    {
+      "name": "RL_thigh",
+      "path": "/World/Robot/RL_thigh",
+      "position_m": [
+        -0.3286735737059021,
+        0.1911321600808626,
+        0.5283241260403868
+      ],
+      "quat_xyzw": [
+        0.04360260871428967,
+        0.47001393850755324,
+        0.024391279029881363,
+        0.8812438797683723
+      ],
+      "mass_kg": 4.8094
+    },
+    {
+      "name": "RL_calf",
+      "path": "/World/Robot/RL_calf",
+      "position_m": [
+        -0.6193557006710786,
+        0.20991781399074325,
+        0.33428544990494324
+      ],
+      "quat_xyzw": [
+        0.0485295846434179,
+        -0.25678601846194415,
+        -0.011874400774031391,
+        0.9651760558276699
+      ],
+      "mass_kg": 0.53
+    },
+    {
+      "name": "RR_hip",
+      "path": "/World/Robot/RR_hip",
+      "position_m": [
+        -0.32843396653828444,
+        -0.07200011845676256,
+        0.5163829406670883
+      ],
+      "quat_xyzw": [
+        -0.049994621992326335,
+        -0.010014785419966709,
+        -0.0005011569714295719,
+        0.9986991492369095
+      ],
+      "mass_kg": 2.9464
+    },
+    {
+      "name": "RR_thigh",
+      "path": "/World/Robot/RR_thigh",
+      "position_m": [
+        -0.32867371160401765,
+        -0.19113153708923958,
+        0.5283378775936046
+      ],
+      "quat_xyzw": [
+        -0.04363414099781364,
+        0.4700130764808279,
+        -0.02440850519488097,
+        0.8812423018390357
+      ],
+      "mass_kg": 4.8094
+    },
+    {
+      "name": "RR_calf",
+      "path": "/World/Robot/RR_calf",
+      "position_m": [
+        -0.6193558521236538,
+        -0.20993093993229348,
+        0.33430055334326525
+      ],
+      "quat_xyzw": [
+        -0.04856439848603285,
+        -0.2567855736195074,
+        0.01188329020748978,
+        0.9651743136835103
+      ],
+      "mass_kg": 0.53
+    },
+    {
+      "name": "e05l_base_link",
+      "path": "/World/Robot/e05l_base_link",
+      "position_m": [
+        -0.026498987355726384,
+        0.020002689018334487,
+        0.5974508243370629
+      ],
+      "quat_xyzw": [
+        -1.798790298989591e-05,
+        -0.010027316955097721,
+        0.0,
+        0.9999497250317726
+      ],
+      "mass_kg": 0.998522736747204
+    },
+    {
+      "name": "e05l_Link1",
+      "path": "/World/Robot/e05l_Link1",
+      "position_m": [
+        -0.026498987355726384,
+        0.020002689018334487,
+        0.5974508243370629
+      ],
+      "quat_xyzw": [
+        -1.798790298989591e-05,
+        -0.010027316955097721,
+        0.0,
+        0.9999497250317726
+      ],
+      "mass_kg": 6.78664377356005
+    },
+    {
+      "name": "e05l_Link2",
+      "path": "/World/Robot/e05l_Link2",
+      "position_m": [
+        -0.030910785001831198,
+        0.02001060329773989,
+        0.8174065834771546
+      ],
+      "quat_xyzw": [
+        0.5795581191217666,
+        -0.4050879358786737,
+        0.40510085466582596,
+        0.5795769563350612
+      ],
+      "mass_kg": 2.89766513566031
+    },
+    {
+      "name": "e05l_Link3",
+      "path": "/World/Robot/e05l_Link3",
+      "position_m": [
+        -0.45820958652480126,
+        0.020015775836982472,
+        0.9737419095883009
+      ],
+      "quat_xyzw": [
+        0.6859305510768303,
+        0.17181059176778418,
+        0.1718023223857019,
+        -0.6859040469910637
+      ],
+      "mass_kg": 2.08601722760905
+    },
+    {
+      "name": "e05l_Link4",
+      "path": "/World/Robot/e05l_Link4",
+      "position_m": [
+        -0.45820958652480126,
+        0.020015775836982472,
+        0.9737419095883009
+      ],
+      "quat_xyzw": [
+        1.5811420698105816e-05,
+        -0.5141124172367485,
+        1.0061603862507318e-05,
+        -0.8577228119222147
+      ],
+      "mass_kg": 1.7248049597405
+    },
+    {
+      "name": "e05l_Link5",
+      "path": "/World/Robot/e05l_Link5",
+      "position_m": [
+        -0.0216532976924374,
+        0.020024080967513718,
+        1.2070734475593574
+      ],
+      "quat_xyzw": [
+        -0.26282714415025565,
+        0.6564613413152077,
+        0.6564361960239729,
+        0.2628153728495268
+      ],
+      "mass_kg": 1.16352965412514
+    },
+    {
+      "name": "e05l_Link6",
+      "path": "/World/Robot/e05l_Link6",
+      "position_m": [
+        -0.0216532976924374,
+        0.020024080967513718,
+        1.2070734475593574
+      ],
+      "quat_xyzw": [
+        -7.640928298635608e-06,
+        0.9283587516214318,
+        -1.9485431843491163e-05,
+        0.3716853882651715
+      ],
+      "mass_kg": 0.631518522684238
+    },
+    {
+      "name": "e05l_end_Link",
+      "path": "/World/Robot/e05l_end_Link",
+      "position_m": [
+        0.09911678642569659,
+        0.02001874366009084,
+        1.080425957439687
+      ],
+      "quat_xyzw": [
+        -7.640928298635608e-06,
+        0.9283587516214318,
+        -1.9485431843491163e-05,
+        0.3716853882651715
+      ],
+      "mass_kg": 0.631518522684238
+    },
+    {
+      "name": "e05l_welding_torch",
+      "path": "/World/Robot/e05l_welding_torch",
+      "position_m": [
+        0.09911678642569659,
+        0.02001874366009084,
+        1.080425957439687
+      ],
+      "quat_xyzw": [
+        -7.640928298635608e-06,
+        0.9283587516214318,
+        -1.9485431843491163e-05,
+        0.3716853882651715
+      ],
+      "mass_kg": 6.056
+    }
+  ],
+  "initial_pose": {
+    "source": "Legs/base orientation: supplied flat_b2_e05l_pro_simplified.xml source_zero_standing; arm: user [0,1.2,2.3,0,1.3,0] rad; base Z aligned to four source foot spheres on floor",
+    "arm_joint_names": [
+      "e05l_joint1",
+      "e05l_joint2",
+      "e05l_joint3",
+      "e05l_joint4",
+      "e05l_joint5",
+      "e05l_joint6"
+    ],
+    "arm_q_rad": [
+      0,
+      1.2,
+      2.3,
+      0,
+      1.3,
+      0
+    ],
+    "leg_joint_names": [
+      "FL_hip_joint",
+      "FL_thigh_joint",
+      "FL_calf_joint",
+      "FR_hip_joint",
+      "FR_thigh_joint",
+      "FR_calf_joint",
+      "RL_hip_joint",
+      "RL_thigh_joint",
+      "RL_calf_joint",
+      "RR_hip_joint",
+      "RR_thigh_joint",
+      "RR_calf_joint"
+    ],
+    "leg_q_rad": [
+      0.1,
+      0.8,
+      -1.5,
+      -0.1,
+      0.8,
+      -1.5,
+      0.1,
+      1.0,
+      -1.5,
+      -0.1,
+      1.0,
+      -1.5
+    ],
+    "base_position_m": [
+      0.0,
+      0.0,
+      0.522967966569944
+    ],
+    "base_quat_xyzw": [
+      -1.798790298989591e-05,
+      -0.010027316955097721,
+      0.0,
+      0.9999497250317726
+    ],
+    "foot_bottom_z_m": [
+      0.00010000017345149215,
+      0.00010005488532879858,
+      0.00010005505883367571,
+      9.999999999996123e-05
+    ],
+    "joint_limits_passed": true,
+    "scope": "initial configuration only; no gait or dynamic balance certificate"
+  },
+  "joints": [
+    {
+      "name": "FL_hip_joint",
+      "path": "/World/Robot/Joints/FL_hip_joint",
+      "q_rad": 0.1,
+      "limits_rad": [
+        -0.87,
+        0.87
+      ],
+      "body0": "/World/Robot/base_link",
+      "body1": "/World/Robot/FL_hip"
+    },
+    {
+      "name": "FL_thigh_joint",
+      "path": "/World/Robot/Joints/FL_thigh_joint",
+      "q_rad": 0.8,
+      "limits_rad": [
+        -0.94,
+        4.69
+      ],
+      "body0": "/World/Robot/FL_hip",
+      "body1": "/World/Robot/FL_thigh"
+    },
+    {
+      "name": "FL_calf_joint",
+      "path": "/World/Robot/Joints/FL_calf_joint",
+      "q_rad": -1.5,
+      "limits_rad": [
+        -2.82,
+        -0.43
+      ],
+      "body0": "/World/Robot/FL_thigh",
+      "body1": "/World/Robot/FL_calf"
+    },
+    {
+      "name": "FR_hip_joint",
+      "path": "/World/Robot/Joints/FR_hip_joint",
+      "q_rad": -0.1,
+      "limits_rad": [
+        -0.87,
+        0.87
+      ],
+      "body0": "/World/Robot/base_link",
+      "body1": "/World/Robot/FR_hip"
+    },
+    {
+      "name": "FR_thigh_joint",
+      "path": "/World/Robot/Joints/FR_thigh_joint",
+      "q_rad": 0.8,
+      "limits_rad": [
+        -0.94,
+        4.69
+      ],
+      "body0": "/World/Robot/FR_hip",
+      "body1": "/World/Robot/FR_thigh"
+    },
+    {
+      "name": "FR_calf_joint",
+      "path": "/World/Robot/Joints/FR_calf_joint",
+      "q_rad": -1.5,
+      "limits_rad": [
+        -2.82,
+        -0.43
+      ],
+      "body0": "/World/Robot/FR_thigh",
+      "body1": "/World/Robot/FR_calf"
+    },
+    {
+      "name": "RL_hip_joint",
+      "path": "/World/Robot/Joints/RL_hip_joint",
+      "q_rad": 0.1,
+      "limits_rad": [
+        -0.87,
+        0.87
+      ],
+      "body0": "/World/Robot/base_link",
+      "body1": "/World/Robot/RL_hip"
+    },
+    {
+      "name": "RL_thigh_joint",
+      "path": "/World/Robot/Joints/RL_thigh_joint",
+      "q_rad": 1.0,
+      "limits_rad": [
+        -0.94,
+        4.69
+      ],
+      "body0": "/World/Robot/RL_hip",
+      "body1": "/World/Robot/RL_thigh"
+    },
+    {
+      "name": "RL_calf_joint",
+      "path": "/World/Robot/Joints/RL_calf_joint",
+      "q_rad": -1.5,
+      "limits_rad": [
+        -2.82,
+        -0.43
+      ],
+      "body0": "/World/Robot/RL_thigh",
+      "body1": "/World/Robot/RL_calf"
+    },
+    {
+      "name": "RR_hip_joint",
+      "path": "/World/Robot/Joints/RR_hip_joint",
+      "q_rad": -0.1,
+      "limits_rad": [
+        -0.87,
+        0.87
+      ],
+      "body0": "/World/Robot/base_link",
+      "body1": "/World/Robot/RR_hip"
+    },
+    {
+      "name": "RR_thigh_joint",
+      "path": "/World/Robot/Joints/RR_thigh_joint",
+      "q_rad": 1.0,
+      "limits_rad": [
+        -0.94,
+        4.69
+      ],
+      "body0": "/World/Robot/RR_hip",
+      "body1": "/World/Robot/RR_thigh"
+    },
+    {
+      "name": "RR_calf_joint",
+      "path": "/World/Robot/Joints/RR_calf_joint",
+      "q_rad": -1.5,
+      "limits_rad": [
+        -2.82,
+        -0.43
+      ],
+      "body0": "/World/Robot/RR_thigh",
+      "body1": "/World/Robot/RR_calf"
+    },
+    {
+      "name": "e05l_joint1",
+      "path": "/World/Robot/Joints/e05l_joint1",
+      "q_rad": 0.0,
+      "limits_rad": [
+        -6.2832,
+        6.2832
+      ],
+      "body0": "/World/Robot/e05l_base_link",
+      "body1": "/World/Robot/e05l_Link1"
+    },
+    {
+      "name": "e05l_joint2",
+      "path": "/World/Robot/Joints/e05l_joint2",
+      "q_rad": 1.2,
+      "limits_rad": [
+        -2.3562,
+        2.3562
+      ],
+      "body0": "/World/Robot/e05l_Link1",
+      "body1": "/World/Robot/e05l_Link2"
+    },
+    {
+      "name": "e05l_joint3",
+      "path": "/World/Robot/Joints/e05l_joint3",
+      "q_rad": 2.3,
+      "limits_rad": [
+        -2.6704,
+        2.6704
+      ],
+      "body0": "/World/Robot/e05l_Link2",
+      "body1": "/World/Robot/e05l_Link3"
+    },
+    {
+      "name": "e05l_joint4",
+      "path": "/World/Robot/Joints/e05l_joint4",
+      "q_rad": 0.0,
+      "limits_rad": [
+        -6.2832,
+        6.2832
+      ],
+      "body0": "/World/Robot/e05l_Link3",
+      "body1": "/World/Robot/e05l_Link4"
+    },
+    {
+      "name": "e05l_joint5",
+      "path": "/World/Robot/Joints/e05l_joint5",
+      "q_rad": 1.3,
+      "limits_rad": [
+        -3.1416,
+        3.1416
+      ],
+      "body0": "/World/Robot/e05l_Link4",
+      "body1": "/World/Robot/e05l_Link5"
+    },
+    {
+      "name": "e05l_joint6",
+      "path": "/World/Robot/Joints/e05l_joint6",
+      "q_rad": 0.0,
+      "limits_rad": [
+        -6.2832,
+        6.2832
+      ],
+      "body0": "/World/Robot/e05l_Link5",
+      "body1": "/World/Robot/e05l_Link6"
+    }
+  ],
+  "source_config_sha256": "963b57a0d6df8b51c734eb29f7983ce312bf65b02bf32012450c4aa5a1105f9c",
+  "hj90_camera": {
+    "model": "SVersion-HJ-90",
+    "source": "ref/hj90_datasheet.md (V2.2, 2026.10)",
+    "mass_kg": 1.056,
+    "size_camera_xyz_m": [
+      0.12,
+      0.0865,
+      0.092
+    ],
+    "stereo_baseline_m": 0.09,
+    "working_distance_m": [
+      0.3,
+      0.8
+    ],
+    "render_clipping_range_m": [
+      0.005,
+      100.0
+    ],
+    "projection_reference": {
+      "distance_m": 0.8,
+      "field_xy_m": [
+        0.667,
+        1.146
+      ]
+    },
+    "pinhole_intrinsics_px": {
+      "fx": 767.6161919040479,
+      "fy": 767.8883071553229,
+      "cx": 320.0,
+      "cy": 550.0
+    },
+    "render_resolution_status": "simulation sampling resolution, not a manufacturer pixel count",
+    "inertia_model": "uniform nominal envelope, COM at housing center; estimated, not manufacturer inertia; bracket mass excluded",
+    "inertia_camera_kg_m2": [
+      [
+        0.00140327,
+        0.0,
+        0.0
+      ],
+      [
+        0.0,
+        0.002012032,
+        0.0
+      ],
+      [
+        0.0,
+        0.0,
+        0.0019256380000000001
+      ]
+    ],
+    "rated_specs_not_simulated": {
+      "field_and_accuracy": [
+        {
+          "distance_m": 0.3,
+          "field_xy_m": [
+            0.25,
+            0.428
+          ],
+          "z_repeatability_m": 3e-05,
+          "measurement_accuracy_m": 0.00029
+        },
+        {
+          "distance_m": 0.5,
+          "field_xy_m": [
+            0.45,
+            0.714
+          ],
+          "z_repeatability_m": 3e-05,
+          "measurement_accuracy_m": 0.0004
+        },
+        {
+          "distance_m": 0.8,
+          "field_xy_m": [
+            0.667,
+            1.146
+          ],
+          "z_repeatability_m": 6e-05,
+          "measurement_accuracy_m": 0.00108
+        }
+      ],
+      "full_frame_max_fps": 6,
+      "typical_full_frame_acquisition_s": [
+        0.2,
+        0.8
+      ],
+      "max_line_scan_hz": 5000,
+      "laser_wavelength_nm": 450,
+      "supply_voltage_v": 24,
+      "supply_current_a": 1.1,
+      "ambient_light_lux": 480000,
+      "operating_temperature_c": [
+        -20,
+        70
+      ],
+      "ingress_protection": "IP65",
+      "communication": "Gigabit Ethernet",
+      "cooling": "forced air",
+      "protective_lid": "motorized; static open geometry only",
+      "accuracy_conditions": "Z repeatability: one standard deviation of 100 measurements on a ceramic sphere; measurement accuracy: VDI/VDE 2634 Part II; neither is a pixelwise Gaussian noise sigma"
+    },
+    "scope": "mass/inertia merged into torch; envelope collider; midpoint pinhole, not active stereo/laser metrology"
+  },
+  "omitted": [
+    "Viser panel",
+    "TCP animation",
+    "welding controller",
+    "navigation and gait controllers"
+  ],
+  "runtime": "Isaac Sim opens paused; dynamic behavior requires separate PhysX validation"
+}

@@ -13,7 +13,7 @@ import numpy as np
 from scipy.ndimage import binary_closing, label
 from scipy.spatial import cKDTree
 
-from .contour_detector import _thin_stroke
+from .skeleton import thin_mask
 from .weld_toes import extract_weld_toes
 
 
@@ -223,6 +223,7 @@ def joint_candidates(depth, intrinsics, plates, plate_semantics=None, plate_inst
     """Retain finite contact intervals with nearby support on opposite sides."""
     height, width = depth.shape
     gap = min(28., max(12., min(depth.shape) * 0.065))
+    edge_band = min(gap, max(3., min(depth.shape) * .012))
     corners = np.array([[0, 0], [width-1, 0], [0, height-1], [width-1, height-1]])
     distances = [cv2.distanceTransform((~plate.mask).astype(np.uint8), cv2.DIST_L2, 5) for plate in plates]
     pixel_positions = [np.argwhere(plate.mask)[:, ::-1].astype(float) for plate in plates]
@@ -250,12 +251,30 @@ def joint_candidates(depth, intrinsics, plates, plate_semantics=None, plate_inst
             support = (da < gap) & (db < gap) & (da + db < gap * 1.5)
             if support.sum() < 20:
                 continue
-            near_a = pixel_positions[i] @ line[:2] + line[2]
-            near_b = pixel_positions[j] @ line[:2] + line[2]
-            near_a = near_a[np.abs(near_a) < gap * 1.5]
-            near_b = near_b[np.abs(near_b) < gap * 1.5]
+            offsets_a = pixel_positions[i] @ line[:2] + line[2]
+            offsets_b = pixel_positions[j] @ line[:2] + line[2]
+            near_a = offsets_a[np.abs(offsets_a) < gap * 1.5]
+            near_b = offsets_b[np.abs(offsets_b) < gap * 1.5]
             if not len(near_a) or not len(near_b) or np.median(near_a) * np.median(near_b) >= 0:
                 continue
+            # A radial distance tolerance also grows the contact past a plate
+            # endpoint. Bound its length using the actual face pixels in a
+            # narrow strip at the contact, independently for BOTH faces.
+            # Closing fills only short interior holes; it cannot extend either
+            # endpoint or borrow support from a distant part of a slanted edge.
+            along = xy @ tangent
+            bins = np.r_[along - .5, along[-1] + .5]
+            finite_support = np.ones(len(xy), dtype=bool)
+            support_bands = []
+            for positions, offsets in ((pixel_positions[i], offsets_a), (pixel_positions[j], offsets_b)):
+                # Plane inliers can stop short of the crease after erosion and
+                # normal filtering. Start at that face's nearest observed edge.
+                band = min(gap, float(np.abs(offsets).min()) + edge_band)
+                support_bands.append(band)
+                boundary = positions[np.abs(offsets) <= band] @ tangent
+                occupied = np.histogram(boundary, bins=bins)[0] > 0
+                occupied = binary_closing(np.pad(occupied, 2), structure=np.ones(5))[2:-2]
+                finite_support &= occupied
             rays = np.column_stack((xy, np.ones(len(xy)))) @ np.linalg.inv(intrinsics).T
             denominator = rays @ a.equation[:3]
             expected_z = np.divide(-a.equation[3], denominator, out=np.full(len(xy), -1.),
@@ -264,7 +283,7 @@ def joint_candidates(depth, intrinsics, plates, plate_semantics=None, plate_inst
             error = np.abs(expected_z - actual_z) / np.maximum(actual_z, 1e-6)
             support &= (expected_z > 0) & (error < .035)
             # Close only short gaps caused by texture/noisy depth.
-            support = binary_closing(support, structure=np.ones(5)) & (expected_z > 0)
+            support = binary_closing(support, structure=np.ones(5)) & (expected_z > 0) & finite_support
             labels, count = label(support)
             for component in range(1, count + 1):
                 selected = np.flatnonzero(labels == component)
@@ -327,6 +346,7 @@ def joint_candidates(depth, intrinsics, plates, plate_semantics=None, plate_inst
                                    "geometry_supported": ((error[selected] < .035) & (expected_z[selected] > 0)
                                                           & (np.linalg.norm(refined-segment, axis=1) <= 5)),
                                    "acute_angle_deg": angle, "rank": rank,
+                                   "finite_support_bands_processed_px": support_bands,
                                    "median_relative_depth_disagreement": float(np.median(error[selected])),
                                    "concavity_signed_distances_estimated_m": signed_contact,
                                    "plate_semantic_support": semantic_support})
@@ -387,7 +407,7 @@ def depth_quality(depth, confidence):
 
 def mask_centerline(mask):
     """Main geodesic path of a thinned mask; bent paths keep their bends."""
-    skeleton = _thin_stroke(mask.astype(np.uint8))
+    skeleton = thin_mask(mask.astype(np.uint8))
     yx = np.argwhere(skeleton)
     if len(yx) < 2:
         return np.empty((0, 2), dtype=float)

@@ -1,9 +1,0 @@
-{
-  "description": "Nominal RGB-D on a mast above the B2 head, in the E10L base frame on the trunk. Replace with measured installation calibration on hardware; contains no workpiece pose.",
-  "image_size": [640, 480],
-  "camera_matrix": [[400.0, 0.0, 320.0], [0.0, 400.0, 240.0], [0.0, 0.0, 1.0]],
-  "distortion_coefficients": [0.0, 0.0, 0.0, 0.0, 0.0],
-  "depth_scale_to_m": 1.0,
-  "depth_convention": "optical_z",
-  "base_from_camera": [[0.0, -0.475149, 0.879905, 0.40], [-1.0, 0.0, 0.0, 0.0], [0.0, -0.879905, -0.475149, 0.25], [0.0, 0.0, 0.0, 1.0]]
-}

@@ -1,0 +1,179 @@
+{
+  "passed": true,
+  "source_stage_sha256": "7553a8b6bbca45ce755b93ff211e9c8379bb3983ff908ceaf109818575195036",
+  "config_sha256": "963b57a0d6df8b51c734eb29f7983ce312bf65b02bf32012450c4aa5a1105f9c",
+  "specification": {
+    "model": "SVersion-HJ-90",
+    "source": "ref/hj90_datasheet.md (V2.2, 2026.10)",
+    "mass_kg": 1.056,
+    "size_camera_xyz_m": [
+      0.12,
+      0.0865,
+      0.092
+    ],
+    "stereo_baseline_m": 0.09,
+    "working_distance_m": [
+      0.3,
+      0.8
+    ],
+    "render_clipping_range_m": [
+      0.005,
+      100.0
+    ],
+    "projection_reference": {
+      "distance_m": 0.8,
+      "field_xy_m": [
+        0.667,
+        1.146
+      ]
+    },
+    "pinhole_intrinsics_px": {
+      "fx": 767.6161919040479,
+      "fy": 767.8883071553229,
+      "cx": 320.0,
+      "cy": 550.0
+    },
+    "render_resolution_status": "simulation sampling resolution, not a manufacturer pixel count",
+    "inertia_model": "uniform nominal envelope, COM at housing center; estimated, not manufacturer inertia; bracket mass excluded",
+    "inertia_camera_kg_m2": [
+      [
+        0.00140327,
+        0.0,
+        0.0
+      ],
+      [
+        0.0,
+        0.002012032,
+        0.0
+      ],
+      [
+        0.0,
+        0.0,
+        0.0019256380000000001
+      ]
+    ],
+    "rated_specs_not_simulated": {
+      "field_and_accuracy": [
+        {
+          "distance_m": 0.3,
+          "field_xy_m": [
+            0.25,
+            0.428
+          ],
+          "z_repeatability_m": 3e-05,
+          "measurement_accuracy_m": 0.00029
+        },
+        {
+          "distance_m": 0.5,
+          "field_xy_m": [
+            0.45,
+            0.714
+          ],
+          "z_repeatability_m": 3e-05,
+          "measurement_accuracy_m": 0.0004
+        },
+        {
+          "distance_m": 0.8,
+          "field_xy_m": [
+            0.667,
+            1.146
+          ],
+          "z_repeatability_m": 6e-05,
+          "measurement_accuracy_m": 0.00108
+        }
+      ],
+      "full_frame_max_fps": 6,
+      "typical_full_frame_acquisition_s": [
+        0.2,
+        0.8
+      ],
+      "max_line_scan_hz": 5000,
+      "laser_wavelength_nm": 450,
+      "supply_voltage_v": 24,
+      "supply_current_a": 1.1,
+      "ambient_light_lux": 480000,
+      "operating_temperature_c": [
+        -20,
+        70
+      ],
+      "ingress_protection": "IP65",
+      "communication": "Gigabit Ethernet",
+      "cooling": "forced air",
+      "protective_lid": "motorized; static open geometry only",
+      "accuracy_conditions": "Z repeatability: one standard deviation of 100 measurements on a ceramic sphere; measurement accuracy: VDI/VDE 2634 Part II; neither is a pixelwise Gaussian noise sigma"
+    },
+    "scope": "mass/inertia merged into torch; envelope collider; midpoint pinhole, not active stereo/laser metrology"
+  },
+  "added_mass_kg": 1.0559999999999974,
+  "robot_mass_kg": 97.74102053281072,
+  "torch_with_camera_mass_kg": 6.056,
+  "merged_inertia_origin_error_kg_m2": 2.8102520310824275e-16,
+  "visual_bounds_camera_xyz_m": [
+    [
+      -0.060000000000000026,
+      -0.04275000000000002,
+      -0.04570000000000002
+    ],
+    [
+      0.06000000000000001,
+      0.04325000000000001,
+      0.04600000002374873
+    ]
+  ],
+  "stereo_baseline_m": 0.09,
+  "envelope_to_original_robot_min_distance_m": 0.009077130695769408,
+  "closest_original_collider": "e05l_torch_component_08",
+  "robot_collider_count": 68,
+  "initial_penetrations_over_0_5mm": 0,
+  "tcp_change_m": 0.0,
+  "optical_origin_error_m": 0.0,
+  "field_of_view_checks": [
+    {
+      "distance_m": 0.3,
+      "datasheet_field_xy_m": [
+        0.25,
+        0.428
+      ],
+      "pinhole_field_xy_m": [
+        0.250124984588251,
+        0.4297499864239995
+      ],
+      "relative_error_xy": [
+        0.0004999383530039925,
+        0.004088753327101596
+      ]
+    },
+    {
+      "distance_m": 0.5,
+      "datasheet_field_xy_m": [
+        0.45,
+        0.714
+      ],
+      "pinhole_field_xy_m": [
+        0.4168749743137517,
+        0.7162499773733325
+      ],
+      "relative_error_xy": [
+        -0.07361116819166291,
+        0.0031512288141912407
+      ]
+    },
+    {
+      "distance_m": 0.8,
+      "datasheet_field_xy_m": [
+        0.667,
+        1.146
+      ],
+      "pinhole_field_xy_m": [
+        0.6669999589020028,
+        1.1459999637973322
+      ],
+      "relative_error_xy": [
+        -6.161618774756184e-08,
+        -3.159046051702019e-08
+      ]
+    }
+  ],
+  "measurement_range_separate_from_render_clipping": true,
+  "scope": "static physical parameter and exported USD checks; inertia estimated; no PhysX dynamics, active laser, accuracy/noise or acquisition timing simulation"
+}

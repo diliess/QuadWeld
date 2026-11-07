@@ -1,0 +1,287 @@
+#usda 1.0
+(
+    defaultPrim = "World"
+    metersPerUnit = 1
+    subLayers = [
+        @industrial_welding.usdc@
+    ]
+    upAxis = "Z"
+)
+
+over "World"
+{
+    over "Robot"
+    {
+        custom string welding:photoPlacement = "A02 static inspection placement; IK/collision/support checked; no gait or travel executed"
+        quatd xformOp:orient = (1, 0, 0, 0)
+        double3 xformOp:translate = (0, 0, 0)
+
+        over "base_link"
+        {
+            quatd xformOp:orient = (0.6087614290087223, 0, 0, 0.7933533402912339)
+            double3 xformOp:translate = (-7.2282400026423534, 2.1857778823964784, 0.5746390000707007)
+        }
+
+        over "front_d435i"
+        {
+            quatd xformOp:orient = (0.37940708997083095, -0.915976882379198, -0.12058893259743375, 0.04994917778864902)
+            double3 xformOp:translate = (-7.35915069481734, 2.5777622453285547, 0.6222890000707006)
+        }
+
+        over "rear_d435i"
+        {
+            quatd xformOp:orient = (-0.04998072268583034, 0.12057980565288401, -0.9158815584637408, 0.37963588962918715)
+            double3 xformOp:translate = (-7.09846780467879, 1.798054028815472, 0.5995000000707007)
+        }
+
+        over "FL_hip"
+        {
+            quatd xformOp:orient = (0.6080006357408732, 0.030425390505886964, 0.03965114088587365, 0.7923618552010862)
+            double3 xformOp:translate = (-7.382808718451344, 2.4844495450850563, 0.5746390000707007)
+        }
+
+        over "FL_thigh"
+        {
+            quatd xformOp:orient = (0.563511286466395, -0.22417545852930143, 0.2317153772623773, 0.7605973821663602)
+            double3 xformOp:translate = (-7.497881247852676, 2.453615953760963, 0.5865920550458255)
+        }
+
+        over "FL_calf"
+        {
+            quatd xformOp:orient = (0.5888332017746215, 0.28184074535801773, -0.15656451233502852, 0.7411671931630405)
+            double3 xformOp:translate = (-7.469844521913382, 2.24184109713653, 0.3093460277225797)
+        }
+
+        over "FR_hip"
+        {
+            quatd xformOp:orient = (0.6080006357408732, -0.030425390505886964, -0.03965114088587365, 0.7923618552010862)
+            double3 xformOp:translate = (-7.243715399465717, 2.521719487579819, 0.5746390000707007)
+        }
+
+        over "FR_thigh"
+        {
+            quatd xformOp:orient = (0.5888332017746215, -0.28184074535801784, 0.15656451233502855, 0.7411671931630405)
+            double3 xformOp:translate = (-7.128642870064385, 2.552553078903912, 0.5865920550458255)
+        }
+
+        over "FR_calf"
+        {
+            quatd xformOp:orient = (0.5635112864663951, 0.22417545852930137, -0.2317153772623773, 0.7605973821663603)
+            double3 xformOp:translate = (-7.047035960576741, 2.3551323096996457, 0.3093460275229128)
+        }
+
+        over "RL_hip"
+        {
+            quatd xformOp:orient = (0.6080006357408732, 0.030425390505886964, 0.03965114088587365, 0.7923618552010862)
+            double3 xformOp:translate = (-7.21276460581899, 1.8498362772131378, 0.5746390000707007)
+        }
+
+        over "RL_thigh"
+        {
+            quatd xformOp:orient = (0.563511286466395, -0.22417545852930143, 0.2317153772623773, 0.7605973821663602)
+            double3 xformOp:translate = (-7.327837135220322, 1.8190026858890447, 0.5865920550458255)
+        }
+
+        over "RL_calf"
+        {
+            quatd xformOp:orient = (0.5888332017746215, 0.28184074535801773, -0.15656451233502852, 0.7411671931630405)
+            double3 xformOp:translate = (-7.299800409281028, 1.6072278292646114, 0.3093460277225797)
+        }
+
+        over "RR_hip"
+        {
+            quatd xformOp:orient = (0.6080006357408732, -0.030425390505886964, -0.03965114088587365, 0.7923618552010862)
+            double3 xformOp:translate = (-7.073671286833363, 1.8871062197079003, 0.5746390000707007)
+        }
+
+        over "RR_thigh"
+        {
+            quatd xformOp:orient = (0.5888332017746215, -0.28184074535801784, 0.15656451233502855, 0.7411671931630405)
+            double3 xformOp:translate = (-6.958598757432031, 1.9179398110319934, 0.5865920550458255)
+        }
+
+        over "RR_calf"
+        {
+            quatd xformOp:orient = (0.5635112864663951, 0.22417545852930137, -0.2317153772623773, 0.7605973821663603)
+            double3 xformOp:translate = (-6.876991847944387, 1.7205190418277274, 0.3093460275229128)
+        }
+
+        over "e05l_base_link"
+        {
+            quatd xformOp:orient = (0.6087614290087223, 0, 0, 0.7933533402912339)
+            double3 xformOp:translate = (-7.2410880430405715, 2.1564533558372014, 0.6496390000707006)
+        }
+
+        over "e05l_Link1"
+        {
+            quatd xformOp:orient = (0.6745036917907832, 0, 0, 0.7382714742969582)
+            double3 xformOp:translate = (-7.2410880430405715, 2.1564533558372014, 0.6496390000707006)
+        }
+
+        over "e05l_Link2"
+        {
+            quatd xformOp:orient = (0.4520432772279277, 0.5008081380183241, 0.49919239326837017, 0.543741702383265)
+            double3 xformOp:translate = (-7.2410880430405715, 2.1564533558372014, 0.8696390000707006)
+        }
+
+        over "e05l_Link3"
+        {
+            quatd xformOp:orient = (-0.38791078482945524, 0.5538522253904741, 0.4395977918260253, -0.5912078457401407)
+            double3 xformOp:translate = (-7.237261646034486, 2.1141712705226126, 1.3226539931420136)
+        }
+
+        over "e05l_Link4"
+        {
+            quatd xformOp:orient = (-0.3488207729493654, 0.539378206736562, -0.604971032785709, -0.47053721207450794)
+            double3 xformOp:translate = (-7.237261646034486, 2.1141712705226126, 1.3226539931420136)
+        }
+
+        over "e05l_Link5"
+        {
+            quatd xformOp:orient = (-0.34321843803796326, -0.575956414025253, 0.2678779061102346, 0.6918935903388241)
+            double3 xformOp:translate = (-7.279604989873936, 2.5822508995999387, 1.1673043807339785)
+        }
+
+        over "e05l_Link6"
+        {
+            quatd xformOp:orient = (0.33909411360072694, -0.9316534201438729, -0.12265449964875802, 0.04464258697112519)
+            double3 xformOp:translate = (-7.279604989873936, 2.5822508995999387, 1.1673043807339785)
+        }
+
+        over "e05l_end_Link"
+        {
+            quatd xformOp:orient = (0.33909411360072694, -0.9316534201438729, -0.12265449964875802, 0.04464258697112519)
+            double3 xformOp:translate = (-7.308718983059575, 2.6909058013815197, 1.0332466031915264)
+        }
+
+        over "e05l_welding_torch"
+        {
+            quatd xformOp:orient = (0.33909411360072694, -0.9316534201438729, -0.12265449964875802, 0.04464258697112519)
+            double3 xformOp:translate = (-7.308718983059575, 2.6909058013815197, 1.0332466031915264)
+        }
+
+        over "Joints"
+        {
+            over "FL_hip_joint"
+            {
+                float drive:angular:physics:targetPosition = 5.729578
+                float state:angular:physics:position = 5.729578
+            }
+
+            over "FL_thigh_joint"
+            {
+                float drive:angular:physics:targetPosition = 37.242256
+                float state:angular:physics:position = 37.242256
+            }
+
+            over "FL_calf_joint"
+            {
+                float drive:angular:physics:targetPosition = -74.48451
+                float state:angular:physics:position = -74.48451
+            }
+
+            over "FR_hip_joint"
+            {
+                float drive:angular:physics:targetPosition = -5.729578
+                float state:angular:physics:position = -5.729578
+            }
+
+            over "FR_thigh_joint"
+            {
+                float drive:angular:physics:targetPosition = 37.242256
+                float state:angular:physics:position = 37.242256
+            }
+
+            over "FR_calf_joint"
+            {
+                float drive:angular:physics:targetPosition = -74.48451
+                float state:angular:physics:position = -74.48451
+            }
+
+            over "RL_hip_joint"
+            {
+                float drive:angular:physics:targetPosition = 5.729578
+                float state:angular:physics:position = 5.729578
+            }
+
+            over "RL_thigh_joint"
+            {
+                float drive:angular:physics:targetPosition = 37.242256
+                float state:angular:physics:position = 37.242256
+            }
+
+            over "RL_calf_joint"
+            {
+                float drive:angular:physics:targetPosition = -74.48451
+                float state:angular:physics:position = -74.48451
+            }
+
+            over "RR_hip_joint"
+            {
+                float drive:angular:physics:targetPosition = -5.729578
+                float state:angular:physics:position = -5.729578
+            }
+
+            over "RR_thigh_joint"
+            {
+                float drive:angular:physics:targetPosition = 37.242256
+                float state:angular:physics:position = 37.242256
+            }
+
+            over "RR_calf_joint"
+            {
+                float drive:angular:physics:targetPosition = -74.48451
+                float state:angular:physics:position = -74.48451
+            }
+
+            over "e05l_joint1"
+            {
+                float drive:angular:physics:targetPosition = -9.831242
+                float state:angular:physics:position = -9.831242
+            }
+
+            over "e05l_joint2"
+            {
+                float drive:angular:physics:targetPosition = 5.3539085
+                float state:angular:physics:position = 5.3539085
+            }
+
+            over "e05l_joint3"
+            {
+                float drive:angular:physics:targetPosition = 113.64456
+                float state:angular:physics:position = 113.64456
+            }
+
+            over "e05l_joint4"
+            {
+                float drive:angular:physics:targetPosition = 11.729983
+                float state:angular:physics:position = 11.729983
+            }
+
+            over "e05l_joint5"
+            {
+                float drive:angular:physics:targetPosition = 32.6732
+                float state:angular:physics:position = 32.6732
+            }
+
+            over "e05l_joint6"
+            {
+                float drive:angular:physics:targetPosition = -107.47556
+                float state:angular:physics:position = -107.47556
+            }
+        }
+    }
+
+    over "Cameras"
+    {
+        def Camera "A02_photo_context"
+        {
+            float2 clippingRange = (0.01, 100)
+            float focalLength = 38.601124
+            float horizontalAperture = 36
+            float verticalAperture = 25.2
+            matrix4d xformOp:transform = ( (0.7059804422911512, 0.7082313288060552, 2.7755575615628926e-17, 0), (-0.21188822342665936, 0.21121480455152705, 0.9541968806862422, -0), (0.6757921247510101, -0.6736443358597101, 0.29917939917154335, 0), (-5.128240002642355, 0.4857778823964791, 1.7, 1) )
+            uniform token[] xformOpOrder = ["xformOp:transform"]
+        }
+    }
+}

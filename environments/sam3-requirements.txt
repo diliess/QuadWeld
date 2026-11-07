@@ -7,18 +7,11 @@ setuptools==80.9.0
 numpy==1.26.4
 # Keep OpenCV compatible with SAM 3's NumPy < 2 requirement.
 opencv-python==4.11.0.86
+pillow>=10.2,<13
 scipy
 psutil
 einops
 pycocotools
 scikit-image
-scikit-learn
-matplotlib
-jupyterlab
-notebook
-ipywidgets
-ipycanvas
-ipympl
-# Install image-notebook dependencies explicitly: upstream's notebooks extra
-# also pulls decord 0.6.0, whose wheel metadata incorrectly declares CPython 3.6.
+# Text-prompt inference only; notebook and point-prompt tools are not needed.
 -e ./thirdparty/sam3

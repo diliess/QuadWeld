@@ -1,339 +1,369 @@
-"""Isaac Sim 6: image-derived contour, Cartesian path and one complete robot pass."""
+"""Load A04 with the normal initial arm pose, capture one HJ-90 RGB frame, and run auto_weld."""
 
 import argparse
-import importlib.metadata
+from datetime import datetime
+import hashlib
 import json
-from dataclasses import asdict, replace
+import math
+import os
 from pathlib import Path
+import subprocess
+import sys
+from zoneinfo import ZoneInfo
 
-from config import WorkpieceConfig
+
+ROOT = Path(__file__).resolve().parent
+BUNDLE = ROOT / "assets/scenes/industrial-welding"
+POSE = "A04_initial_arm"
+INITIAL_ARM_Q = (0., 1.2, 2.3, 0., 1.3, 0.)
+RESOLUTION = (640, 1100)
 
 
-def parse_args(argv=None) -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Build the QuadWeld Isaac Sim 6 scene")
-    parser.add_argument("--headless", action="store_true", help="Complete the task and exit without the GUI")
-    mode = parser.add_mutually_exclusive_group()
-    mode.add_argument("--scene-only", action="store_true", help="Only create the scene and capture RGB-D")
-    mode.add_argument("--plan-only", action="store_true", help="Detect and preflight the path without executing it")
-    parser.add_argument("--path-mode", choices=("auto", "closed", "open"), default="auto",
-                        help="Detect a closed loop or endpoint-to-endpoint open stroke")
-    parser.add_argument("--demo-open", action="store_true", help="Draw an open U-shaped sample stroke")
-    defaults = WorkpieceConfig()
-    parser.add_argument("--workpiece", choices=("outline", "plate-grid", "open-box"), default="outline",
-                        help="Workpiece geometry; plate-grid/open-box automatically use scene-only preview")
-    parser.add_argument("--environment-usd", type=Path,
-                        help="Replace the demo floor/workpiece with a metre/Z-up environment USD; "
-                             "preview unless --seam-source auto-weld")
-    parser.add_argument("--seam-source", choices=("contour", "auto-weld"), default="contour",
-                        help="contour: dark painted path on a plate; auto-weld: scripts/auto_weld.py (DA3 + SAM3) "
-                             "plate-intersection seams, welded as a fillet")
-    parser.add_argument("--weld-length", type=float, default=0.4,
-                        help="auto-weld: longest seam segment to weld, centred nearest the arm (m)")
-    parser.add_argument("--auto-weld-python", type=Path,
-                        help="auto-weld: python of the depth-anything-3 environment (default $QUADWELD_DA3_PYTHON)")
-    parser.add_argument("--robot-pose", type=float, nargs=3, metavar=("X", "Y", "YAW_DEG"),
-                        help="Override the robot profile's base position (m) and heading in the world")
-    parser.add_argument("--record-demo", action="store_true",
-                        help="Save third-person and torch close-up frames to <output-dir>/demo for "
-                             "scripts/make_demo_video.py")
-    parser.add_argument("--grid-count", type=int, default=defaults.grid_count, help="Number of tiles per grid side")
-    parser.add_argument("--tile-size", type=float, default=defaults.tile_size_m, help="Square tile side length in metres")
-    parser.add_argument("--seam-gap", type=float, default=defaults.gap_m, help="Physical gap between tiles in metres")
-    parser.add_argument("--wall-height", type=float, default=defaults.wall_height_m, help="Box wall height in metres")
-    parser.add_argument("--gpu", type=int, default=0, help="Single RTX GPU index")
-    parser.add_argument("--webrtc", action="store_true", help="Stream the live task to a WebRTC client")
-    parser.add_argument("--public-ip", help="Server IP reachable by the WebRTC client")
-    parser.add_argument("--signal-port", type=int, default=49100, help="WebRTC TCP signaling port")
-    parser.add_argument("--stream-port", type=int, default=47998, help="WebRTC UDP media port")
-    parser.add_argument("--auto-start", action="store_true", help="Skip the WebRTC Start task gate")
-    parser.add_argument("--exit-on-complete", action="store_true", help="Close the application after task completion")
-    parser.add_argument("--robot", choices=("ur5e", "rm65", "b2_e10l"), default="ur5e",
-                        help="Robot installation and controller profile")
-    parser.add_argument("--robot-usd", help="Override the selected robot profile's USD asset")
-    parser.add_argument("--calibration", type=Path,
-                        help="Override the selected robot's RGB-D installation calibration")
-    parser.add_argument(
-        "--output-dir", type=Path, default=Path(__file__).resolve().parent / "outputs" / "runs" / "default", help="Saved USD and RGB preview directory"
-    )
-    args = parser.parse_args(argv)
-    if not all(1 <= port <= 65535 for port in (args.signal_port, args.stream_port)):
-        parser.error("Streaming ports must be between 1 and 65535")
+def write_json(path, data):
+    path = Path(path)
+    temporary = path.with_suffix(path.suffix + ".tmp")
+    temporary.write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n")
+    temporary.replace(path)
+
+
+def child_environment():
+    """Each interpreter loads its own Python and native libraries."""
+    environment = os.environ.copy()
+    for key in ("PYTHONPATH", "PYTHONHOME", "LD_LIBRARY_PATH", "LD_PRELOAD", "VIRTUAL_ENV",
+                "CONDA_PREFIX", "CONDA_DEFAULT_ENV", "CONDA_SHLVL", "CUDA_VISIBLE_DEVICES"):
+        environment.pop(key, None)
+    environment.update(PYTHONUNBUFFERED="1", PYTHONDONTWRITEBYTECODE="1")
+    return environment
+
+
+def scene_setup():
+    manifest = json.loads((BUNDLE / "manifest.json").read_text())
+    pose = manifest["full_scene"]["poses"][POSE]
+    if len(pose["arm_q_rad"]) != 6 or any(
+            not math.isclose(a, b, abs_tol=1e-8) for a, b in zip(pose["arm_q_rad"], INITIAL_ARM_Q)):
+        raise ValueError("A04_initial_arm must retain the normal initial joint positions")
+    asset = (BUNDLE / pose["asset"]).resolve()
+    if not asset.is_relative_to(BUNDLE.resolve()) or not asset.is_file():
+        raise FileNotFoundError(f"A04 pose asset not found in the scene bundle: {asset}")
+    return {"pose": POSE, "usd": str(asset), "camera": manifest["full_scene"]["hj90_camera"],
+            "resolution_wh": list(RESOLUTION), "base_xy_yaw": pose["base_xy_yaw"],
+            "base_height_m": pose["base_height_m"], "arm_q_rad": pose["arm_q_rad"],
+            "placement": "authored static A04 placement; normal initial arm; no aiming or walking",
+            "recorded_static_checks": pose["static_checks"]}
+
+
+def python_candidates(role, explicit=None, da3_python=None):
+    configured = explicit or os.environ.get(f"QUADWELD_{role.upper()}_PYTHON")
+    if configured:
+        return [Path(configured).expanduser().absolute()]
+    candidates = []
+    if role == "isaac":
+        candidates.append(ROOT / ".venv/bin/python")
+    if role == "sam" and da3_python:
+        candidates.append(Path(da3_python).parent.parent.parent / "sam3/bin/python")
+    candidates += [Path(sys.executable), ROOT / f".venv-{role}/bin/python"]
+    name = {"isaac": "isaacsim", "da3": "depth-anything-3", "sam": "sam3"}[role]
+    for directory in ("miniconda3", "miniforge3", "anaconda3"):
+        candidates.append(Path.home() / directory / "envs" / name / "bin/python")
+    registry = Path.home() / ".conda/environments.txt"
+    if registry.is_file():
+        candidates += [Path(line.strip()) / "bin/python" for line in registry.read_text().splitlines()
+                       if line.strip() and not line.lstrip().startswith("#")]
+    return list(dict.fromkeys(path.absolute() for path in candidates))
+
+
+def find_python(role, explicit=None, da3_python=None):
+    modules = {"isaac": ["isaacsim", "PIL", "numpy"],
+               "da3": ["depth_anything_3", "torch", "cv2", "scipy", "matplotlib", "PIL", "safetensors"],
+               "sam": ["sam3", "torch", "torchvision", "cv2", "PIL"]}[role]
+    probe = ("import importlib.util,json,sys; "
+             "print(json.dumps({'version':list(sys.version_info[:2]),"
+             "'missing':[name for name in sys.argv[1:] if importlib.util.find_spec(name) is None]}))")
+    failures = []
+    for executable in python_candidates(role, explicit, da3_python):
+        if not executable.is_file() or not os.access(executable, os.X_OK):
+            if explicit or os.environ.get(f"QUADWELD_{role.upper()}_PYTHON"):
+                failures.append(f"Not an executable file: {executable}")
+            continue
+        try:
+            result = subprocess.run([str(executable), "-c", probe, *modules], cwd=ROOT,
+                                    env=child_environment(), capture_output=True, text=True, timeout=15)
+            info = json.loads(result.stdout.strip()) if result.returncode == 0 else None
+            if info and info["version"] == [3, 12] and not info["missing"]:
+                return str(executable), None
+            failures.append(f"{executable}: {info or result.stderr.strip()[-400:]}")
+        except (OSError, ValueError, subprocess.TimeoutExpired) as error:
+            failures.append(f"{executable}: {error}")
+    detail = "; ".join(failures)
+    return None, (f"Set --{role}-python or QUADWELD_{role.upper()}_PYTHON to a Python 3.12 environment "
+                  f"containing {', '.join(modules)}. {detail}").strip()
+
+
+def preflight(args, setup):
+    interpreters, issues = {}, []
+    roles = ("isaac",) if args.capture_only else ("isaac", "da3", "sam")
+    for role in roles:
+        executable, error = find_python(role, getattr(args, f"{role}_python"), interpreters.get("da3"))
+        interpreters[role] = executable
+        if error:
+            issues.append(error)
+    weights = [] if args.capture_only else [
+        ROOT / "thirdparty/sam3/assets/model/sam3.1_multiplex.pt",
+        ROOT / "thirdparty/depth-anything-3/weights/DA3NESTED-GIANT-LARGE-1.1/config.json",
+        ROOT / "thirdparty/depth-anything-3/weights/DA3NESTED-GIANT-LARGE-1.1/model.safetensors"]
+    for path in weights:
+        if not path.is_file() or path.stat().st_size == 0:
+            issues.append(f"Missing model file: {path}")
     try:
-        args.workpiece_config = WorkpieceConfig(kind=args.workpiece, grid_count=args.grid_count,
-                                               tile_size_m=args.tile_size, gap_m=args.seam_gap,
-                                               wall_height_m=args.wall_height)
-    except ValueError as exc:
-        parser.error(str(exc))
-    auto_weld = args.seam_source == "auto-weld"
-    if auto_weld and (args.demo_open or args.weld_length <= 0):
-        parser.error("--seam-source auto-weld needs a positive --weld-length and no --demo-open")
-    if args.environment_usd is not None:
-        args.environment_usd = args.environment_usd.expanduser().resolve()
-        if not args.environment_usd.is_file():
-            parser.error(f"Environment USD does not exist: {args.environment_usd}")
-        if args.workpiece != "outline" or args.demo_open or (args.plan_only and not auto_weld):
-            parser.error("--environment-usd uses scene preview, or planning with --seam-source auto-weld; it cannot "
-                         "be combined with --workpiece plate-grid/open-box, --plan-only or --demo-open")
-        args.scene_only = args.scene_only or not auto_weld
-    if args.workpiece != "outline":
-        if (args.plan_only and not auto_weld) or args.demo_open:
-            parser.error("plate-grid/open-box support scene preview and RGB-D capture only; "
-                         "--plan-only and --demo-open require --workpiece outline")
-        args.scene_only = args.scene_only or not auto_weld
-    elif auto_weld and args.environment_usd is None:
-        parser.error("--seam-source auto-weld needs plate corners: use --environment-usd or --workpiece open-box")
+        gpu = subprocess.run(["nvidia-smi", "--query-gpu=index", "--format=csv,noheader,nounits"],
+                             capture_output=True, text=True, timeout=10)
+        if gpu.returncode or str(args.gpu) not in gpu.stdout.split():
+            issues.append(f"NVIDIA GPU {args.gpu} unavailable: {gpu.stderr.strip() or gpu.stdout.strip()}")
+    except (OSError, subprocess.TimeoutExpired) as error:
+        issues.append(f"NVIDIA GPU check failed: {error}")
+    return {"ready": not issues, "scene": setup, "interpreters": interpreters, "issues": issues}
+
+
+def run_process(command, log_path):
+    print(f"Running {Path(command[1]).name}; log: {log_path}", flush=True)
+    with Path(log_path).open("w") as log:
+        process = subprocess.Popen(command, cwd=ROOT, env=child_environment(), stdout=subprocess.PIPE,
+                                   stderr=subprocess.STDOUT, text=True, errors="replace", bufsize=1)
+        try:
+            for line in process.stdout:
+                log.write(line)
+                log.flush()
+                print(line, end="", flush=True)
+            code = process.wait()
+        except BaseException:
+            process.terminate()
+            try:
+                process.wait(timeout=10)
+            except subprocess.TimeoutExpired:
+                process.kill()
+                process.wait()
+            raise
+        if code:
+            raise RuntimeError(f"Process exited with status {code}; see {log_path}")
+
+
+def inspect_stage(stage, setup):
+    """Read pose and camera metadata only; no seam coordinates enter perception."""
+    import numpy as np
+    from pxr import UsdGeom, UsdUtils
+
+    if not stage or UsdGeom.GetStageUpAxis(stage) != "Z" or UsdGeom.GetStageMetersPerUnit(stage) != 1.:
+        raise ValueError("The imported A04 scene must use metres and Z-up")
+    camera = UsdGeom.Camera(stage.GetPrimAtPath(setup["camera"]))
+    if not camera:
+        raise ValueError(f"HJ-90 camera missing: {setup['camera']}")
+    _, _, missing = UsdUtils.ComputeAllDependencies(setup["usd"])
+    if missing:
+        raise FileNotFoundError(f"Missing scene dependencies: {missing}")
+    actual_q = []
+    for index in range(1, 7):
+        joint = stage.GetPrimAtPath(f"/World/Robot/Joints/e05l_joint{index}")
+        value = joint.GetAttribute("state:angular:physics:position").Get() if joint else None
+        if value is None:
+            raise ValueError(f"Initial arm joint state missing: {index}")
+        actual_q.append(math.radians(value))
+    if not np.allclose(actual_q, INITIAL_ARM_Q, atol=1e-6, rtol=0):
+        raise ValueError(f"Arm pose differs from the normal initial position: {actual_q}")
+    base = stage.GetPrimAtPath("/World/Robot/base_link")
+    if not base:
+        raise ValueError("B2 base link missing from scene")
+    cache = UsdGeom.XformCache()
+    position = list(cache.GetLocalToWorldTransform(base).ExtractTranslation())
+    expected = [*setup["base_xy_yaw"][:2], setup["base_height_m"]]
+    if not np.allclose(position, expected, atol=1e-6, rtol=0):
+        raise ValueError(f"B2 is not at the recorded A04 station position: {position}")
+    if camera.GetProjectionAttr().Get() != UsdGeom.Tokens.perspective:
+        raise ValueError("HJ-90 must be a perspective camera")
+    focal = float(camera.GetFocalLengthAttr().Get())
+    horizontal = float(camera.GetHorizontalApertureAttr().Get())
+    vertical = float(camera.GetVerticalApertureAttr().Get())
+    if not all(math.isfinite(v) and v > 0 for v in (focal, horizontal, vertical)):
+        raise ValueError("Invalid camera focal length or aperture")
+    if camera.GetHorizontalApertureOffsetAttr().Get() or camera.GetVerticalApertureOffsetAttr().Get():
+        raise ValueError("This HJ-90 fixture expects centred pinhole optics")
+    width, height = setup["resolution_wh"]
+    calibration = {"image_size": [width, height],
+                   "camera_matrix": [[width*focal/horizontal, 0, width/2],
+                                     [0, height*focal/vertical, height/2], [0, 0, 1]],
+                   "distortion_coefficients": [0, 0, 0, 0, 0]}
+    world_from_camera = np.asarray(cache.GetLocalToWorldTransform(camera.GetPrim())).T @ np.diag([1., -1., -1., 1.])
+    return calibration, {"arm_q_rad": actual_q, "base_position_world_m": position,
+                         "world_from_camera_optical": world_from_camera.tolist()}
+
+
+def capture_worker(args, setup):
+    """Separate process: capture RGB with the authored static pose, then release Isaac/GPU."""
+    output = args.output_dir
+    report_path = output / "capture.json"
+    report = {"passed": False, "scene": setup, "physics_executed": False, "aim_adjusted": False}
+    write_json(report_path, report)
+    from isaacsim import SimulationApp
+
+    app = SimulationApp({"headless": args.headless, "renderer": "RaytracedLighting",
+                         "active_gpu": args.gpu, "multi_gpu": False, "open_usd": setup["usd"],
+                         "width": RESOLUTION[0], "height": RESOLUTION[1], "sync_loads": True,
+                         "extra_args": ["--/exts/omni.kit.async_engine/keep_loop_running=false",
+                                        "--/app/window/title=QuadWeld | A04 initial arm | HJ-90"]})
+    try:
+        import numpy as np
+        import omni.replicator.core as rep
+        import omni.timeline
+        import omni.usd
+        from PIL import Image
+
+        timeline = omni.timeline.get_timeline_interface()
+        timeline.stop()
+        for _ in range(60):
+            app.update()
+        stage = omni.usd.get_context().get_stage()
+        calibration, pose = inspect_stage(stage, setup)
+        if not args.headless:
+            from omni.kit.viewport.utility import get_active_viewport
+            viewport = get_active_viewport()
+            if viewport:
+                viewport.camera_path = setup["camera"]
+                viewport.set_texture_resolution(tuple(RESOLUTION))
+        product = rep.create.render_product(setup["camera"], tuple(RESOLUTION))
+        rgb = rep.AnnotatorRegistry.get_annotator("rgb")
+        rgb.attach(product)
+        try:
+            for _ in range(32):
+                app.update()
+            for _ in range(5):
+                rep.orchestrator.step(rt_subframes=16, pause_timeline=True, delta_time=0.)
+                data = np.asarray(rgb.get_data()).copy()
+                if data.ndim != 3 or data.shape[:2] != (RESOLUTION[1], RESOLUTION[0]) or data.shape[2] < 3:
+                    continue
+                data = data[..., :3]
+                if not np.isfinite(data).all():
+                    continue
+                if data.dtype != np.uint8:
+                    data = (np.clip(data, 0, 1)*255).astype(np.uint8)
+                if float(data.std()) >= 1.:
+                    break
+            else:
+                raise RuntimeError("HJ-90 did not return a valid, nonconstant RGB frame")
+            if timeline.is_playing():
+                raise RuntimeError("The timeline unexpectedly advanced during static capture")
+            Image.fromarray(data).save(output / "rgb.png")
+            write_json(output / "camera.json", calibration)
+            report.update(passed=True, actual_pose=pose, rgb="rgb.png", calibration="camera.json",
+                          image_sha256=hashlib.sha256((output / "rgb.png").read_bytes()).hexdigest(),
+                          rgb_std=float(data.std()), depth_source="DA3 from captured RGB; no renderer depth")
+            write_json(report_path, report)
+        finally:
+            rgb.detach(product)
+            product.destroy()
+    except BaseException as error:
+        report.update(passed=False, error=str(error))
+        write_json(report_path, report)
+        raise
+    finally:
+        # Kit may terminate this worker during close; persist the report first.
+        app.close()
+    return 0
+
+
+def execute(args, setup, checked):
+    output = args.output_dir
+    if output.exists() and any(output.iterdir()):
+        raise ValueError(f"Use an empty output directory to avoid mixing runs: {output}")
+    output.mkdir(parents=True, exist_ok=True)
+    report_path = output / "run_report.json"
+    report = {"completed": False, "status": "preflight", "scene": setup, "preflight": checked,
+              "started_at": datetime.now(ZoneInfo("Asia/Taipei")).isoformat()}
+    write_json(report_path, report)
+    try:
+        if not checked["ready"]:
+            raise RuntimeError("\n".join(checked["issues"]))
+        report["status"] = "capturing_rgb"
+        write_json(report_path, report)
+        command = [checked["interpreters"]["isaac"], str(Path(__file__).resolve()), "--_capture-worker",
+                   "--output-dir", str(output), "--gpu", str(args.gpu)]
+        if args.headless:
+            command.append("--headless")
+        run_process(command, output / "capture.log")
+        capture = json.loads((output / "capture.json").read_text())
+        if not capture.get("passed"):
+            raise RuntimeError(f"RGB capture failed: {capture.get('error', 'see capture.log')}")
+        image = output / "rgb.png"
+        digest = hashlib.sha256(image.read_bytes()).hexdigest()
+        if digest != capture["image_sha256"]:
+            raise RuntimeError("Captured image differs from its capture report")
+        report["capture"] = capture
+        if args.capture_only:
+            report.update(completed=True, status="capture_only")
+        else:
+            report["status"] = "recognizing"
+            write_json(report_path, report)
+            command = [checked["interpreters"]["da3"], str(ROOT / "scripts/auto_weld.py"), str(image),
+                       "--sam-python", checked["interpreters"]["sam"], "--gpu", str(args.gpu),
+                       "--intrinsics", str(output / "camera.json"), "--output-dir", str(output / "auto_weld"),
+                       "--semantic-threshold", str(args.semantic_threshold)]
+            if args.model_cache_dir:
+                command += ["--model-cache-dir", str(args.model_cache_dir)]
+            run_process(command, output / "auto_weld.log")
+            result = json.loads((output / "auto_weld/data/auto_report.json").read_text())
+            if len(result["results"]) != 1 or result["results"][0]["image_sha256"] != digest:
+                raise RuntimeError("Auto-weld report does not match the captured RGB frame")
+            image_result = result["results"][0]
+            report.update(completed=True, status=image_result["status"],
+                          recognition={"report": "auto_weld/data/auto_report.json", "paths": "auto_weld/seam_paths.csv",
+                                       "candidate_paths": len(image_result["paths"]),
+                                       "valid_intervals": sum(len(path["geometry_runs"]) for path in image_result["paths"]),
+                                       "coordinate_frame": "estimated optical camera; metres"})
+        write_json(report_path, report)
+        print(f"Completed: {report['status']}\nResults: {output}", flush=True)
+        return 0
+    except BaseException as error:
+        report.update(completed=False, status="failed", error=str(error))
+        write_json(report_path, report)
+        raise
+
+
+def parse_args(argv=None):
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--output-dir", type=Path, help="New, empty run directory")
+    parser.add_argument("--gpu", type=int, default=0, help="Physical GPU index")
+    parser.add_argument("--headless", action="store_true", help="Capture without a GUI")
+    parser.add_argument("--isaac-python", type=Path, help="Isaac Sim Python executable")
+    parser.add_argument("--da3-python", type=Path, help="Depth Anything 3 Python executable")
+    parser.add_argument("--sam-python", type=Path, help="SAM3 Python executable")
+    parser.add_argument("--model-cache-dir", type=Path, help="Optional DA3/SAM model-output cache")
+    parser.add_argument("--semantic-threshold", type=float, default=.25)
+    parser.add_argument("--capture-only", action="store_true", help="Capture RGB without running recognition")
+    parser.add_argument("--check", action="store_true", help="Check environments/assets/GPU without launching Isaac")
+    parser.add_argument("--_capture-worker", action="store_true", help=argparse.SUPPRESS)
+    args = parser.parse_args(argv)
+    if args.gpu < 0 or not 0 < args.semantic_threshold <= 1:
+        parser.error("Use --gpu >= 0 and 0 < --semantic-threshold <= 1")
+    stamp = datetime.now(ZoneInfo("Asia/Taipei")).strftime("%Y%m%d_%H%M%S_%f")
+    args.output_dir = (args.output_dir or ROOT / "outputs/runs" / f"a04_{stamp}").expanduser().resolve()
+    if args.model_cache_dir:
+        args.model_cache_dir = args.model_cache_dir.expanduser().resolve()
     return args
 
 
-def main() -> None:
-    args = parse_args()
-    if args.environment_usd:
-        print(f"Environment {'preview' if args.scene_only else 'task'}: {args.environment_usd}; "
-              f"robot profile: {args.robot}.", flush=True)
-    if args.workpiece != "outline" and args.scene_only:
-        print(f"Workpiece preview: {args.workpiece}; capture RGB-D without planning or path execution.", flush=True)
-    try:
-        isaacsim_version = importlib.metadata.version("isaacsim")
-    except importlib.metadata.PackageNotFoundError:
-        isaacsim_version = None  # A non-pip Isaac Sim installation can use python.sh.
-    if isaacsim_version is not None and not isaacsim_version.startswith("6."):
-        raise RuntimeError(f"Isaac Sim 6 is required; this Python has Isaac Sim {isaacsim_version}")
-
-    from isaacsim import SimulationApp
-
-    launch_config = {"headless": args.headless or args.webrtc, "renderer": "RaytracedLighting",
-                     "active_gpu": args.gpu, "multi_gpu": False}
-    if args.webrtc:
-        launch_config["hide_ui"] = False
-        prefix = "--/exts/omni.kit.livestream.app/primaryStream/"
-        launch_config["extra_args"] = [
-            prefix + f"signalPort={args.signal_port}", prefix + f"streamPort={args.stream_port}",
-            prefix + "enableEventTracing=false",
-            "--/exts/omni.services.livestream.session/quitOnSessionEnded=false",
-        ]
-        if args.public_ip:
-            launch_config["extra_args"].append(prefix + f"publicIp={args.public_ip}")
-    simulation_app = SimulationApp(launch_config)
-    failed = False
-    try:
-        if args.webrtc:
-            import omni.kit.app
-
-            # Enable streaming on the same Python experience used by the controller.
-            # The full editor experience has a separate startup/layout lifecycle.
-            extensions = omni.kit.app.get_app().get_extension_manager()
-            extensions.set_extension_enabled_immediate("omni.kit.livestream.app", True)
-            if not extensions.is_extension_enabled("omni.kit.livestream.app"):
-                raise RuntimeError("Could not enable Isaac Sim WebRTC streaming")
-        # Kit-dependent modules must be imported after SimulationApp starts.
-        from isaacsim.core.experimental.utils import app as app_utils
-        from isaacsim.core.experimental.utils import stage as stage_utils
-        from isaacsim.core.experimental.prims import Articulation
-        from isaacsim.core.rendering_manager import ViewportManager
-        from isaacsim.core.simulation_manager import SimulationManager
-        import numpy as np
-
-        from config import scene_config_for_robot
-        from robot.asset import articulation_path, rigid_body_path
-        from scene.camera import create_rgbd_sensor, save_rgbd_frame
-        from scene.create_scene import create_scene
-        from scene.workpieces import export_workpiece_asset
-        from vision.rgbd import RGBDCalibration, RGBDSettings, generate_rgbd_trajectory, save_rgbd_trajectory
-
-        SCENE = replace(scene_config_for_robot(args.robot), workpiece=args.workpiece_config)
-        if args.robot_pose:
-            x, y, yaw = args.robot_pose
-            SCENE = replace(SCENE, robot_base_position_world=(x, y, SCENE.robot_base_position_world[2]),
-                            robot_base_quaternion_wxyz=(np.cos(np.radians(yaw) / 2), 0., 0., np.sin(np.radians(yaw) / 2)))
-        args.output_dir = args.output_dir.resolve()
-        args.output_dir.mkdir(parents=True, exist_ok=True)
-        workpiece_asset = None
-        if args.workpiece != "outline":
-            workpiece_asset = export_workpiece_asset(args.output_dir / "workpiece.usda", SCENE.workpiece)
-        if args.calibration is None:
-            args.calibration = Path(__file__).resolve().parent / "calibration" / SCENE.camera_calibration_file
-        calibration = RGBDCalibration.load(args.calibration)
-        stage_utils.create_new_stage()
-        camera, robot_usd = create_scene(SCENE, args.robot_usd, camera_calibration=calibration,
-                                         open_outline=args.demo_open, workpiece_asset=workpiece_asset,
-                                         environment_asset=args.environment_usd)
-        if not args.headless or args.webrtc:
-            eye, target = [1.5, -1.45, 1.55], [0.3, 0.0, 0.45]
-            if args.environment_usd:
-                from scene.environment import environment_camera_view
-                eye, target = environment_camera_view(stage_utils.get_current_stage())
-            ViewportManager.set_camera_view(ViewportManager.get_camera(), eye=eye, target=target)
-
-        SimulationManager.setup_simulation(dt=SCENE.physics_dt, device="cpu")
-        args.output_dir.mkdir(parents=True, exist_ok=True)
-        (args.output_dir / "rgbd_calibration.json").write_text(args.calibration.read_text())
-        (args.output_dir / "robot_config.json").write_text(json.dumps(
-            {**asdict(SCENE), "loaded_robot_usd": robot_usd,
-             "loaded_environment_usd": str(args.environment_usd) if args.environment_usd else None}, indent=2) + "\n")
-        # Invalidate a previous run's success before any new planning or execution.
-        (args.output_dir / "execution_report.json").write_text(json.dumps(
-            {"completed": False, "status": "scene_only" if args.scene_only else "not_executed"}, indent=2) + "\n")
-        stage_path = args.output_dir / "quadweld_scene.usda"
-        if not stage_utils.get_current_stage().GetRootLayer().Export(str(stage_path)):
-            raise RuntimeError(f"Could not export scene to {stage_path}")
-
-        sensor = create_rgbd_sensor(camera, SCENE)
-        recorder = None
-        if args.record_demo:
-            from scipy.spatial.transform import Rotation
-            from scene.recording import DemoRecorder
-
-            world_from_mount = np.eye(4)
-            world_from_mount[:3, :3] = Rotation.from_quat(SCENE.robot_base_quaternion_wxyz, scalar_first=True).as_matrix()
-            world_from_mount[:3, 3] = SCENE.robot_base_position_world
-            recorder = DemoRecorder(args.output_dir / "demo", world_from_mount)
-        robot = Articulation(articulation_path(stage_utils.get_current_stage(), SCENE.robot_prim_path))
-        from robot.kinematics import SerialKinematics
-        from robot.robot_controller import RobotController, plan_joint_path
-
-        stage = stage_utils.get_current_stage()
-        model = SerialKinematics.from_stage(stage, SCENE)
-        world_from_base = model.world_from_base.copy()  # Simulator display/readback adapter only.
-        model.world_from_base = np.eye(4)
-        if not args.scene_only:
-            from scene.debug import draw_plan, draw_polyline
-            model.save(args.output_dir / "robot_kinematics.npz")
-        panel = None
-        if args.webrtc:
-            from scene.streaming import StreamingPanel
-
-            panel = StreamingPanel(preview=args.scene_only)
-            print(f"WebRTC: TCP {args.signal_port}, UDP {args.stream_port}; "
-                  f"server={args.public_ip or 'server network IP'}", flush=True)
-            if args.auto_start:
-                panel.start()
-            else:
-                panel.wait_for_start(simulation_app)
-            panel.set_status("Initializing robot and capturing RGB-D...")
-        app_utils.play(commit=True)
-        app_utils.update_app(steps=10)
-        expected_dofs = len(SCENE.joint_names) + len(SCENE.hold_joint_positions)
-        if robot.num_dofs != expected_dofs:
-            raise RuntimeError(f"Expected {expected_dofs} DOFs for {args.robot}, found {robot.num_dofs}")
-        controller = RobotController(robot, model, simulation_app, SCENE, args.output_dir,
-                                     world_from_base=world_from_base)
-        if panel:
-            controller.progress_callback = panel.set_status
-        controller.tick_callback = recorder
-        controller.initialize_home()
-        preview_path = args.output_dir / "body_rgb.png"
-        image_rgb, depth_m = save_rgbd_frame(sensor, simulation_app, args.output_dir)
-        # The path is planned in the base frame of this image.
-        controller.capture_base()
-        world_from_base = controller.world_from_base
-        # This workflow captures once. Release the render product before stopping
-        # the timeline, which otherwise resets the still-active RTX sensor.
-        sensor.detach_annotators(sensor.annotators)
-        del sensor
-        print(f"Robot profile: {args.robot}")
-        print(f"Robot USD: {robot_usd}")
-        print(f"Robot DOFs: {robot.num_dofs}")
-        print(f"Scene saved: {stage_path}")
-        print(f"RGB image saved: {preview_path}")
-        if workpiece_asset:
-            print(f"Reusable workpiece USD: {workpiece_asset}")
-
-        if not args.scene_only:
-            if panel:
-                panel.set_status("Detecting path and checking trajectory...")
-            settings = RGBDSettings(waypoint_spacing_m=SCENE.waypoint_spacing_m, tcp_offset_m=SCENE.tcp_offset_m,
-                                    approach_height_m=SCENE.approach_height_m, dark_threshold=SCENE.dark_threshold,
-                                    min_contour_area_px=SCENE.min_contour_area_px, path_mode=args.path_mode)
-            if args.seam_source == "auto-weld":
-                from planning.fillet import plan_reachable_fillet
-                from vision.auto_weld_seams import load_seam, run_auto_weld, support_plane
-
-                if not SCENE.foot_links:
-                    raise RuntimeError("auto-weld rescales monocular depth by the support plane; "
-                                       f"{args.robot} defines no foot_links")
-                feet = controller.body_positions_base(
-                    [rigid_body_path(stage, SCENE.robot_prim_path, name) for name in SCENE.foot_links])
-                support_point, support_normal = support_plane(
-                    feet, SCENE.foot_radius_m, controller.base_from_world[:3, :3] @ [0., 0., 1.])
-                print("Running scripts/auto_weld.py (DA3 + SAM3) on the captured image...", flush=True)
-                report_dir = run_auto_weld(preview_path, args.output_dir / "auto_weld", args.calibration,
-                                           python=args.auto_weld_python, gpu=args.gpu)
-                seam = load_seam(report_dir, calibration.base_from_camera, support_point, support_normal)
-                # Saved before planning, so an unreachable seam can still be inspected.
-                np.savez(args.output_dir / "seam.npz", seam_base=seam.points_base, face_normals_base=seam.normals_base,
-                         support_point_base=support_point, support_normal_base=support_normal,
-                         world_from_base=world_from_base, home_q=controller.current_q())
-                (args.output_dir / "seam_report.json").write_text(json.dumps(
-                    {"coordinate_frame": "robot_base", **seam.diagnostics}, indent=2) + "\n")
-                tool_points = np.load(SCENE.tool_hull_file) if SCENE.tool_hull_file else None
-                # Above the observed web top (plus a margin for monocular error) the arm may pass.
-                web_top = None if seam.upright_top_m is None else seam.upright_top_m + 0.05
-                joints, poses, phases, path, _, plan_info = plan_reachable_fillet(
-                    model, seam.points_base, seam.normals_base, controller.current_q(), SCENE, settings,
-                    args.weld_length, tool_points=tool_points, face_a_top_m=web_top)
-                controller.observed_surface = None
-                (args.output_dir / "seam_report.json").write_text(json.dumps(
-                    {"coordinate_frame": "robot_base", **seam.diagnostics, **plan_info}, indent=2) + "\n")
-                np.savez(args.output_dir / "trajectory.npz", seam_base=seam.points_base,
-                         face_normals_base=seam.normals_base, surface_points=path.surface_points,
-                         poses_base=poses, joint_positions=joints, phases=phases, depth_scale=seam.scale,
-                         support_point_base=support_point, support_normal_base=support_normal,
-                         coordinate_frame="robot_base", base_from_camera=calibration.base_from_camera,
-                         world_from_base=world_from_base, path_closed=False)
-                print(f"Seam {seam.diagnostics['path_id']}: {seam.diagnostics['seam_length_m']:.3f} m observed, "
-                      f"depth scale {seam.scale:.3f}; welding {plan_info['weld_length_m']:.2f} m "
-                      f"with torch roll {plan_info['torch_roll_deg']:.0f} deg", flush=True)
-            else:
-                result = generate_rgbd_trajectory(image_rgb, depth_m, calibration, settings)
-                save_rgbd_trajectory(result, image_rgb, args.output_dir)
-                path = result.path
-                controller.observed_surface = result.surface
-                joints, poses, phases = plan_joint_path(model, path, controller.current_q(), SCENE,
-                                                        update_callback=simulation_app.update if args.webrtc else None,
-                                                        surface=result.surface)
-                np.savez(args.output_dir / "trajectory.npz", contour_pixel=result.contour_pixel,
-                         contour_base=result.contour_base, surface_points=path.surface_points,
-                         poses_base=poses, joint_positions=joints, phases=phases,
-                         surface_normal_base=result.surface.normal, surface_point_base=result.surface.point,
-                         coordinate_frame="robot_base", base_from_camera=calibration.base_from_camera,
-                         path_closed=result.closed)
-            draw_plan(stage, path, world_from_base)
-            if not stage.GetRootLayer().Export(str(stage_path)):
-                raise RuntimeError(f"Could not export planned scene to {stage_path}")
-            print(f"Preflight passed: {len(path.surface_points)} path samples; {len(joints) - 1} motion targets", flush=True)
-            if not args.plan_only:
-                controller.follow_cartesian_path(joints, poses, phases)
-                actual_world = np.array([row[2:5] for row in controller.history]) @ world_from_base[:3, :3].T + world_from_base[:3, 3]
-                draw_polyline(stage, "TCPActual", actual_world, (1.0, 0.4, 0.0))
-                if not stage.GetRootLayer().Export(str(args.output_dir / "quadweld_result.usda")):
-                    raise RuntimeError("Could not export result scene")
-                print("Path pass complete; TCP lifted at the final point.", flush=True)
-                if recorder:
-                    controller.phase = "done"  # Hold on the drawn TCP trace.
-                    for _ in range(90):
-                        controller.tick()
-        if recorder:
-            recorder.close()
-            print(f"Demo frames: {args.output_dir / 'demo'}", flush=True)
-
-        if panel:
-            panel.set_status("Task complete. Close the application to exit." if not args.plan_only and not args.scene_only
-                             else "Preview complete. Close the application to exit.")
-
-        if (not args.headless or args.webrtc) and not args.exit_on_complete:
-            while simulation_app.is_running():
-                simulation_app.update()
-        app_utils.stop(commit=True)
-    except Exception:
-        # Kit fast shutdown may terminate before Python renders an uncaught exception.
-        import traceback
-        failed = True
-        traceback.print_exc()
-        raise
-    finally:
-        # PNG/NPY writes above are synchronous; no Replicator writer queue exists.
-        simulation_app.close(wait_for_replicator=False, exit_code=int(failed))
+def main(argv=None):
+    args = parse_args(argv)
+    setup = scene_setup()
+    if args._capture_worker:
+        return capture_worker(args, setup)
+    checked = preflight(args, setup)
+    if args.check:
+        print(json.dumps(checked, ensure_ascii=False, indent=2))
+        return 0 if checked["ready"] else 1
+    return execute(args, setup, checked)
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        raise SystemExit(main())
+    except (OSError, ValueError, RuntimeError, subprocess.SubprocessError) as error:
+        print(f"QuadWeld failed: {error}", file=sys.stderr)
+        raise SystemExit(1)

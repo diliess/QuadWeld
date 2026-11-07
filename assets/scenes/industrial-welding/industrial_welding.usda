@@ -1,0 +1,15 @@
+#usda 1.0
+(
+    defaultPrim = "World"
+    metersPerUnit = 1
+    upAxis = "Z"
+    subLayers = [@industrial_welding.usdc@]
+)
+
+over "World"
+{
+    over "Robot" (active = false) {}
+    over "Cameras" (active = false) {}
+    over "Lights" (active = false) {}
+    over "PhysicsScene" (active = false) {}
+}

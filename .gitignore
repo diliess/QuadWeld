@@ -1,8 +1,7 @@
 __pycache__/
 *.py[cod]
 .venv/
+.venv-*/
 outputs/
-NvStreamer-*.etli
-assets/vendor/
 thirdparty/sam3/
 thirdparty/depth-anything-3/

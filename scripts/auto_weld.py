@@ -107,7 +107,7 @@ def run_worker(command):
 
 
 def calibrated_intrinsics(path, original_hw, processed_hw):
-    """A calibrated camera matrix (calibration/*.json) at DA3's processed resolution."""
+    """An optional calibrated pinhole matrix at DA3's processed resolution."""
     import numpy as np
 
     calibration = json.loads(Path(path).read_text())
@@ -157,7 +157,8 @@ def serialize_result(index, image, data, result, band_width):
             arrays[joint_prefix + "_" + field] = candidate[field]
         joint_report = {key: candidate[key] for key in (
             "planes", "acute_angle_deg", "rank", "median_relative_depth_disagreement",
-            "concavity_signed_distances_estimated_m", "plate_semantic_support", "overlaps_weld")}
+            "concavity_signed_distances_estimated_m", "plate_semantic_support", "overlaps_weld",
+            "finite_support_bands_processed_px")}
         joint_report.update(kind="plate_joint_candidate", weld_state="unknown", segments=[],
                             centerline_key=joint_prefix + "_centerline_xy",
                             xyz_key=joint_prefix + "_xyz_camera_estimated_m",
@@ -504,7 +505,7 @@ def save_result_index(reports, directory):
     paired = sum(bool(weld.get("toe_segments")) for weld in welds)
     paths = sum(len(report["paths"]) for report in reports)
     lines = [
-        "# DA3 与 SAM3 焊缝实验结果", "",
+        "# DA3 与 SAM3 焊缝识别结果", "",
         f"当前汇总：{len(reports)} 张图片，{len(welds)} 个焊道区域候选，"
         f"其中 {paired} 个有两侧边缘；共 {paths} 条候选路径。", "",
         "## 从这里查看", "",
@@ -520,23 +521,13 @@ def save_result_index(reports, directory):
         "| [data/weld_toes.csv](data/weld_toes.csv) | 焊趾原始深度、平面与局部表面坐标及标记 |", "",
         "`seam_paths.csv` 按 `image,path_id,geometry_run` 分组，排除 `geometry_run=-1`，"
         "按 `sample` 排序。不同组不要直接连接。坐标单位为米，位于估计相机坐标系。", "",
-        "自动识别复跑会替换上述当前结果并更新本说明。单独深度推理和手工选区实验默认写入 `data/`。", "",
+        "自动识别复跑会替换上述当前结果并更新本说明。", "",
     ]
     if all((directory / "data" / f"sam_{category}_overview.jpg").is_file() for category in ("weld", "plate")):
         lines += ["## SAM3 单独分割结果", "",
                   "- [SAM3 焊道候选](data/sam_weld_overview.jpg)",
                   "- [SAM3 工件候选](data/sam_plate_overview.jpg)", "",
                   "展示本轮全部文字提示掩码及模型分数，尚未经过 DA3 几何筛选；工件候选可能包含桌面和背景。", ""]
-    review = ROOT / "docs/weld_image_results.md"
-    if review.is_file():
-        link = os.path.relpath(review, directory).replace(os.sep, "/")
-        lines += ["## 逐张效果检查", "",
-                  f"[原始图片数量与逐张识别效果]({link})：包含原图、结果叠加和漏检案例。",
-                  "这是人工看图整理的快照；更新识别结果后需要同步更新报告。", ""]
-    if (directory / "archive.zip").is_file():
-        lines += ["## 早期实验", "",
-                  "[archive.zip](archive.zip) 保存三张单图深度实验及手工选区几何实验，文件保留原名。",
-                  "压缩包内的旧报告保留当时的路径记录；需要复现时可解压到临时目录。", ""]
     (directory / "README.md").write_text("\n".join(lines), encoding="utf-8")
 
 
@@ -665,7 +656,7 @@ def main():
     parser.add_argument("--reuse-depth-dir", type=Path, help="Reuse only depth files with matching input SHA256")
     parser.add_argument("--model-cache-dir", type=Path, help="Optional model-output cache; inputs are verified by SHA256")
     parser.add_argument("--intrinsics", type=Path,
-                        help="Calibrated pinhole camera JSON (calibration/*.json) replacing DA3's estimated intrinsics")
+                        help="Optional pinhole camera JSON replacing DA3's estimated intrinsics")
     parser.add_argument("--reuse-semantics", type=Path, help=argparse.SUPPRESS)
     parser.add_argument("--semantic-worker", type=Path, help=argparse.SUPPRESS)
     args = parser.parse_args()

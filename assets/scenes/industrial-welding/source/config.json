@@ -1,0 +1,1128 @@
+{
+  "hall": {
+    "size_m": [
+      32,
+      32
+    ],
+    "ceiling_m": 6.0,
+    "main_aisle_m": 2.8,
+    "local_aisle_m": 2.0
+  },
+  "robot": {
+    "start_xy_yaw": [
+      -14.0,
+      0.0,
+      0.0
+    ],
+    "mount_xyz_m": [
+      -0.025,
+      0.02,
+      0.075
+    ],
+    "mount_rpy_rad": [
+      0,
+      0,
+      0
+    ],
+    "mount_plate_size_m": [
+      0.3,
+      0.24,
+      0.012
+    ],
+    "mount_plate_status": "removed at user request; source robot mounting pose retained",
+    "torch_tcp_delta_m": [
+      0,
+      0,
+      0
+    ],
+    "torch_tcp_delta_rpy_rad": [
+      0,
+      0,
+      0
+    ],
+    "stance_calves_rad": [
+      -1.2,
+      -1.3,
+      -1.65,
+      -2.0,
+      -2.35
+    ],
+    "transport_arm_q_rad": [
+      0.0,
+      0.3897977763069189,
+      1.9495183160026217,
+      -3.8788822873402333,
+      2.2360380060162828,
+      -2.789616896357475
+    ],
+    "transport_pose_status": "scene-specific compact pose, source limits and self-collision checked; hardware cable routing unmodelled",
+    "torch_mount_delta_xyz_m": [
+      0,
+      0,
+      0
+    ],
+    "torch_mount_delta_rpy_rad": [
+      0,
+      0,
+      0
+    ],
+    "mount_plate_enabled": false,
+    "hj90_camera": {
+      "status": "datasheet mass and envelope collision applied to the rigid torch assembly; pinhole fitted to 800 mm field; active stereo/laser accuracy not simulated",
+      "specification_source": "ref/hj90_datasheet.md (V2.2, 2026.10)",
+      "size_m": [0.12, 0.0865, 0.092],
+      "size_axes": "camera X=120 mm baseline direction, Y=86.5 mm height, Z=92 mm depth; brochure order 120 x 92 x 86.5 mm",
+      "mass_kg": 1.056,
+      "stereo_baseline_m": 0.09,
+      "inertia_model": "uniform nominal envelope, COM at housing center; estimated, not manufacturer inertia; bracket mass excluded",
+      "center_m": [-0.065, -0.104, 0.072],
+      "mount": {
+        "collar_inner_radius_m": 0.0402,
+        "collar_thickness_m": 0.004,
+        "collar_z_range_m": [0.008, 0.026],
+        "bracket_bounds_m": {
+          "collar_ear": [[-0.015, -0.050, 0.010], [0.015, -0.041, 0.024]],
+          "bridge_plate": [[-0.095, -0.044, 0.010], [0.005, -0.038, 0.026]],
+          "camera_seat": [[-0.095, -0.044, 0.024], [-0.035, -0.038, 0.055]]
+        }
+      },
+      "aim": "along_torch",
+      "projection_reference": {"distance_m": 0.8, "field_xy_m": [0.667, 1.146]},
+      "width": 640,
+      "height": 1100,
+      "resolution_status": "simulation sampling resolution, not a manufacturer pixel count",
+      "working_distance_m": [0.3, 0.8],
+      "near_m": 0.005,
+      "far_m": 100.0,
+      "rated_specs": {
+        "field_and_accuracy": [
+          {"distance_m": 0.3, "field_xy_m": [0.250, 0.428], "z_repeatability_m": 0.00003, "measurement_accuracy_m": 0.00029},
+          {"distance_m": 0.5, "field_xy_m": [0.450, 0.714], "z_repeatability_m": 0.00003, "measurement_accuracy_m": 0.00040},
+          {"distance_m": 0.8, "field_xy_m": [0.667, 1.146], "z_repeatability_m": 0.00006, "measurement_accuracy_m": 0.00108}
+        ],
+        "full_frame_max_fps": 6,
+        "typical_full_frame_acquisition_s": [0.2, 0.8],
+        "max_line_scan_hz": 5000,
+        "laser_wavelength_nm": 450,
+        "supply_voltage_v": 24,
+        "supply_current_a": 1.1,
+        "ambient_light_lux": 480000,
+        "operating_temperature_c": [-20, 70],
+        "ingress_protection": "IP65",
+        "communication": "Gigabit Ethernet",
+        "cooling": "forced air",
+        "protective_lid": "motorized; static open geometry only",
+        "accuracy_conditions": "Z repeatability: one standard deviation of 100 measurements on a ceramic sphere; measurement accuracy: VDI/VDE 2634 Part II; neither is a pixelwise Gaussian noise sigma"
+      }
+    },
+    "stance_height_status": "geometric stance options in source joint limits; highest added posture about 0.60 m, not a manufacturer height certification",
+    "initial_arm_q_rad": [
+      0,
+      1.2,
+      2.3,
+      0,
+      1.3,
+      0
+    ],
+    "initial_leg_q_rad": [
+      0.1,
+      0.8,
+      -1.5,
+      -0.1,
+      0.8,
+      -1.5,
+      0.1,
+      1.0,
+      -1.5,
+      -0.1,
+      1.0,
+      -1.5
+    ],
+    "initial_base_quat_xyzw": [
+      -1.79879029899e-05,
+      -0.0100273169551,
+      0.0,
+      0.999949725032
+    ],
+    "initial_ground_clearance_m": 0.0001,
+    "initial_pose_source": "Legs/base orientation: supplied flat_b2_e05l_pro_simplified.xml source_zero_standing; arm: user [0,1.2,2.3,0,1.3,0] rad; base Z aligned to four source foot spheres on floor"
+  },
+  "welding": {
+    "sample_spacing_m": 0.025,
+    "segment_length_m": 0.3,
+    "tcp_standoff_m": 0.015,
+    "approach_distance_m": 0.1,
+    "position_tolerance_m": 0.002,
+    "orientation_tolerance_deg": 1.0
+  },
+  "stations": [
+    {
+      "id": "A01",
+      "kind": "t_joint",
+      "xy": [
+        -12.5,
+        3.2
+      ],
+      "yaw_deg": 0,
+      "table_height_m": 0.238,
+      "plate_thickness_m": 0.012,
+      "rib_height_m": 0.18,
+      "segment_torch_roll_deg": {
+        "root_front.03": 0.0,
+        "root_front.00": 0.0,
+        "root_front.01": 0.0,
+        "root_front.02": 0.0
+      },
+      "access_design": "free floor around table; stance requires full folded-body and TCP-pose collision checks"
+    },
+    {
+      "id": "A02",
+      "kind": "butt_plate",
+      "xy": [
+        -7.5,
+        3.2
+      ],
+      "yaw_deg": 15,
+      "table_height_m": 0.5295000000000001,
+      "plate_thickness_m": 0.012,
+      "rib_height_m": 0.2,
+      "access_design": "two adjacent finite-thickness V-prepared plates; front-side approach; full TCP pose and quadruped support/collision required",
+      "incline_deg": 0,
+      "pair_size_m": [
+        1.0,
+        0.56
+      ],
+      "root_gap_m": 0.001,
+      "groove_depth_m": 0.0035,
+      "groove_included_angle_deg": 60,
+      "backing_thickness_m": 0.012,
+      "fixture_lift_m": 0,
+      "preparation_band_width_m": 0.02,
+      "root_height_target_m": 0.55,
+      "representative_seam": "butt_center",
+      "torch_roll_deg": 0,
+      "travel_angle_deg": 0,
+      "segment_torch_roll_deg": {
+        "butt_center.03": 0.0,
+        "butt_center.00": 0.0,
+        "butt_center.01": 0.0,
+        "butt_center.02": 0.0
+      },
+      "plate_colors_rgb": [
+        [
+          0.42,
+          0.45,
+          0.48
+        ],
+        [
+          0.49,
+          0.52,
+          0.54
+        ]
+      ],
+      "prepared_color_rgb": [
+        0.78,
+        0.8,
+        0.81
+      ]
+    },
+    {
+      "id": "A03",
+      "kind": "t_joint",
+      "xy": [
+        -2.5,
+        3.2
+      ],
+      "yaw_deg": -15,
+      "table_height_m": 1.138,
+      "plate_thickness_m": 0.012,
+      "rib_height_m": 0.2,
+      "segment_torch_roll_deg": {
+        "root_front.00": 0.0,
+        "root_front.03": 0.0,
+        "root_front.01": 0.0,
+        "root_front.02": 0.0
+      },
+      "access_design": "free floor around table; stance requires full folded-body and TCP-pose collision checks"
+    },
+    {
+      "id": "A04",
+      "kind": "vertical_corner",
+      "xy": [
+        2.5,
+        3.2
+      ],
+      "yaw_deg": 90,
+      "table_height_m": 0.338,
+      "plate_thickness_m": 0.01,
+      "rib_height_m": 0.4,
+      "segment_torch_roll_deg": {
+        "vertical_up.00": 0.0,
+        "vertical_up.01": 0.0
+      },
+      "travel_angle_deg": 10,
+      "segment_travel_angle_deg": {
+        "vertical_up.00": 0,
+        "vertical_up.01": 10
+      },
+      "access_design": "free floor around table; stance requires full folded-body and TCP-pose collision checks"
+    },
+    {
+      "id": "A05",
+      "kind": "butt_plate",
+      "xy": [
+        7.5,
+        3.2
+      ],
+      "yaw_deg": 15,
+      "table_height_m": 0.8295,
+      "plate_thickness_m": 0.012,
+      "rib_height_m": 0.2,
+      "access_design": "two adjacent finite-thickness V-prepared plates; front-side approach; full TCP pose and quadruped support/collision required",
+      "incline_deg": 0,
+      "pair_size_m": [
+        1.0,
+        0.56
+      ],
+      "root_gap_m": 0.001,
+      "groove_depth_m": 0.0035,
+      "groove_included_angle_deg": 60,
+      "backing_thickness_m": 0.012,
+      "fixture_lift_m": 0,
+      "preparation_band_width_m": 0.02,
+      "root_height_target_m": 0.85,
+      "representative_seam": "butt_center",
+      "torch_roll_deg": 0,
+      "travel_angle_deg": 0,
+      "segment_torch_roll_deg": {
+        "butt_center.00": 0.0,
+        "butt_center.03": 0.0,
+        "butt_center.01": 0.0,
+        "butt_center.02": 0.0
+      },
+      "plate_colors_rgb": [
+        [
+          0.42,
+          0.45,
+          0.48
+        ],
+        [
+          0.49,
+          0.52,
+          0.54
+        ]
+      ],
+      "prepared_color_rgb": [
+        0.78,
+        0.8,
+        0.81
+      ]
+    },
+    {
+      "id": "A06",
+      "kind": "inclined",
+      "xy": [
+        12.5,
+        3.2
+      ],
+      "yaw_deg": -20,
+      "table_height_m": 0.538,
+      "plate_thickness_m": 0.012,
+      "rib_height_m": 0.18,
+      "incline_deg": 22,
+      "segment_torch_roll_deg": {
+        "inclined_root.00": 0.0,
+        "inclined_root.01": 0.0,
+        "inclined_root.02": 0.0
+      },
+      "access_design": "free floor around table; stance requires full folded-body and TCP-pose collision checks"
+    },
+    {
+      "id": "A07",
+      "kind": "s_curve",
+      "xy": [
+        -12.5,
+        6.5
+      ],
+      "yaw_deg": 0,
+      "table_height_m": 0.538,
+      "plate_thickness_m": 0.012,
+      "rib_height_m": 0.15,
+      "curve_length_m": 1.0,
+      "curve_amplitude_m": 0.1,
+      "torch_roll_deg": 180,
+      "segment_length_m": 0.15,
+      "segment_torch_roll_deg": {
+        "open_S_root.00": 180.0,
+        "open_S_root.04": 180.0,
+        "open_S_root.03": 180.0,
+        "open_S_root.01": 270.0,
+        "open_S_root.02": 270.0,
+        "open_S_root.07": 270.0,
+        "open_S_root.08": 270.0,
+        "open_S_root.05": 270.0,
+        "open_S_root.06": 270.0
+      },
+      "access_design": "free floor around table; stance requires full folded-body and TCP-pose collision checks"
+    },
+    {
+      "id": "A08",
+      "kind": "open_gusset_bracket",
+      "xy": [
+        -7.5,
+        6.5
+      ],
+      "yaw_deg": -20,
+      "table_height_m": 0.538,
+      "plate_thickness_m": 0.01,
+      "rib_height_m": 0.35,
+      "segment_torch_roll_deg": {
+        "gusset_foot.00": 0.0,
+        "gusset_foot.01": 0.0
+      },
+      "bracket_size_m": [
+        0.82,
+        0.4
+      ],
+      "representative_seam": "gusset_foot",
+      "access_design": "free floor around table; stance requires full folded-body and TCP-pose collision checks"
+    },
+    {
+      "id": "A09",
+      "kind": "butt_plate",
+      "xy": [
+        -2.5,
+        6.5
+      ],
+      "yaw_deg": -15,
+      "table_height_m": 0.44532029784783717,
+      "plate_thickness_m": 0.012,
+      "rib_height_m": 0.18,
+      "access_design": "two adjacent finite-thickness V-prepared plates; front-side approach; full TCP pose and quadruped support/collision required",
+      "incline_deg": 15,
+      "pair_size_m": [
+        1.0,
+        0.56
+      ],
+      "root_gap_m": 0.001,
+      "groove_depth_m": 0.0035,
+      "groove_included_angle_deg": 60,
+      "backing_thickness_m": 0.012,
+      "fixture_lift_m": 0.012,
+      "preparation_band_width_m": 0.02,
+      "root_height_target_m": 0.55,
+      "representative_seam": "butt_center",
+      "torch_roll_deg": 0,
+      "travel_angle_deg": 0,
+      "segment_torch_roll_deg": {
+        "butt_center.00": 0.0,
+        "butt_center.01": 0.0,
+        "butt_center.03": 0.0,
+        "butt_center.02": 0.0
+      },
+      "plate_colors_rgb": [
+        [
+          0.42,
+          0.45,
+          0.48
+        ],
+        [
+          0.49,
+          0.52,
+          0.54
+        ]
+      ],
+      "prepared_color_rgb": [
+        0.78,
+        0.8,
+        0.81
+      ]
+    },
+    {
+      "id": "A10",
+      "kind": "s_curve",
+      "xy": [
+        2.5,
+        6.5
+      ],
+      "yaw_deg": 0,
+      "table_height_m": 0.238,
+      "plate_thickness_m": 0.012,
+      "rib_height_m": 0.15,
+      "curve_length_m": 1.0,
+      "curve_amplitude_m": 0.1,
+      "torch_roll_deg": 180,
+      "segment_length_m": 0.15,
+      "segment_torch_roll_deg": {
+        "open_S_root.00": 180.0,
+        "open_S_root.04": 180.0,
+        "open_S_root.03": 270.0,
+        "open_S_root.01": 270.0,
+        "open_S_root.02": 270.0,
+        "open_S_root.07": 270.0,
+        "open_S_root.08": 270.0,
+        "open_S_root.05": 270.0,
+        "open_S_root.06": 270.0
+      },
+      "access_design": "free floor around table; stance requires full folded-body and TCP-pose collision checks"
+    },
+    {
+      "id": "A11",
+      "kind": "butt_plate",
+      "xy": [
+        7.5,
+        6.5
+      ],
+      "yaw_deg": 15,
+      "table_height_m": 0.5286387840678323,
+      "plate_thickness_m": 0.012,
+      "rib_height_m": 0.18,
+      "access_design": "two adjacent finite-thickness V-prepared plates; front-side approach; full TCP pose and quadruped support/collision required",
+      "incline_deg": 30,
+      "pair_size_m": [
+        1.0,
+        0.56
+      ],
+      "root_gap_m": 0.001,
+      "groove_depth_m": 0.0035,
+      "groove_included_angle_deg": 60,
+      "backing_thickness_m": 0.012,
+      "fixture_lift_m": 0.012,
+      "preparation_band_width_m": 0.02,
+      "root_height_target_m": 0.7,
+      "representative_seam": "butt_center",
+      "torch_roll_deg": 0,
+      "travel_angle_deg": 0,
+      "segment_torch_roll_deg": {
+        "butt_center.00": 0.0,
+        "butt_center.01": 0.0,
+        "butt_center.03": 0.0,
+        "butt_center.02": 0.0
+      },
+      "plate_colors_rgb": [
+        [
+          0.42,
+          0.45,
+          0.48
+        ],
+        [
+          0.49,
+          0.52,
+          0.54
+        ]
+      ],
+      "prepared_color_rgb": [
+        0.78,
+        0.8,
+        0.81
+      ]
+    },
+    {
+      "id": "A12",
+      "kind": "s_curve",
+      "xy": [
+        12.5,
+        6.5
+      ],
+      "yaw_deg": -15,
+      "table_height_m": 0.388,
+      "plate_thickness_m": 0.012,
+      "rib_height_m": 0.15,
+      "curve_length_m": 1.0,
+      "curve_amplitude_m": 0.1,
+      "torch_roll_deg": 180,
+      "segment_length_m": 0.15,
+      "segment_torch_roll_deg": {
+        "open_S_root.00": 180.0,
+        "open_S_root.04": 180.0,
+        "open_S_root.03": 270.0,
+        "open_S_root.01": 270.0,
+        "open_S_root.02": 270.0,
+        "open_S_root.07": 270.0,
+        "open_S_root.08": 270.0,
+        "open_S_root.05": 270.0,
+        "open_S_root.06": 270.0
+      },
+      "access_design": "free floor around table; stance requires full folded-body and TCP-pose collision checks"
+    },
+    {
+      "id": "A13",
+      "kind": "t_joint",
+      "xy": [
+        -12.5,
+        9.8
+      ],
+      "yaw_deg": 0,
+      "table_height_m": 0.388,
+      "plate_thickness_m": 0.012,
+      "rib_height_m": 0.18,
+      "segment_torch_roll_deg": {
+        "root_front.03": 0.0,
+        "root_front.00": 0.0,
+        "root_front.01": 0.0,
+        "root_front.02": 0.0
+      },
+      "access_design": "free floor around table; stance requires full folded-body and TCP-pose collision checks"
+    },
+    {
+      "id": "A14",
+      "kind": "s_curve",
+      "xy": [
+        -7.5,
+        9.8
+      ],
+      "yaw_deg": 15,
+      "table_height_m": 0.688,
+      "plate_thickness_m": 0.012,
+      "rib_height_m": 0.15,
+      "curve_length_m": 1.0,
+      "curve_amplitude_m": 0.1,
+      "torch_roll_deg": 180,
+      "segment_length_m": 0.15,
+      "segment_torch_roll_deg": {
+        "open_S_root.00": 180.0,
+        "open_S_root.04": 180.0,
+        "open_S_root.03": 180.0,
+        "open_S_root.01": 180.0,
+        "open_S_root.02": 270.0,
+        "open_S_root.07": 0.0,
+        "open_S_root.08": 270.0,
+        "open_S_root.05": 270.0,
+        "open_S_root.06": 270.0
+      },
+      "access_design": "free floor around table; stance requires full folded-body and TCP-pose collision checks"
+    },
+    {
+      "id": "A15",
+      "kind": "t_joint",
+      "xy": [
+        -2.5,
+        9.8
+      ],
+      "yaw_deg": -15,
+      "table_height_m": 0.688,
+      "plate_thickness_m": 0.012,
+      "rib_height_m": 0.18,
+      "segment_torch_roll_deg": {
+        "root_front.03": 0.0,
+        "root_front.00": 0.0,
+        "root_front.01": 0.0,
+        "root_front.02": 0.0
+      },
+      "access_design": "free floor around table; stance requires full folded-body and TCP-pose collision checks"
+    },
+    {
+      "id": "A16",
+      "kind": "s_curve",
+      "xy": [
+        2.5,
+        9.8
+      ],
+      "yaw_deg": 0,
+      "table_height_m": 0.838,
+      "plate_thickness_m": 0.012,
+      "rib_height_m": 0.15,
+      "curve_length_m": 1.0,
+      "curve_amplitude_m": 0.1,
+      "torch_roll_deg": 180,
+      "segment_length_m": 0.15,
+      "segment_torch_roll_deg": {
+        "open_S_root.00": 180.0,
+        "open_S_root.04": 180.0,
+        "open_S_root.03": 180.0,
+        "open_S_root.01": 0.0,
+        "open_S_root.02": 0.0,
+        "open_S_root.07": 0.0,
+        "open_S_root.08": 270.0,
+        "open_S_root.05": 270.0,
+        "open_S_root.06": 270.0
+      },
+      "access_design": "free floor around table; stance requires full folded-body and TCP-pose collision checks"
+    },
+    {
+      "id": "A17",
+      "kind": "butt_plate",
+      "xy": [
+        7.5,
+        9.8
+      ],
+      "yaw_deg": 15,
+      "table_height_m": 0.621999693627681,
+      "plate_thickness_m": 0.012,
+      "rib_height_m": 0.18,
+      "access_design": "two adjacent finite-thickness V-prepared plates; front-side approach; full TCP pose and quadruped support/collision required",
+      "incline_deg": 45,
+      "pair_size_m": [
+        1.0,
+        0.56
+      ],
+      "root_gap_m": 0.001,
+      "groove_depth_m": 0.0035,
+      "groove_included_angle_deg": 60,
+      "backing_thickness_m": 0.012,
+      "fixture_lift_m": 0.012,
+      "preparation_band_width_m": 0.02,
+      "root_height_target_m": 0.85,
+      "representative_seam": "butt_center",
+      "torch_roll_deg": 0,
+      "travel_angle_deg": 0,
+      "segment_torch_roll_deg": {
+        "butt_center.01": 0.0,
+        "butt_center.00": 0.0,
+        "butt_center.03": 0.0,
+        "butt_center.02": 0.0
+      },
+      "plate_colors_rgb": [
+        [
+          0.42,
+          0.45,
+          0.48
+        ],
+        [
+          0.49,
+          0.52,
+          0.54
+        ]
+      ],
+      "prepared_color_rgb": [
+        0.78,
+        0.8,
+        0.81
+      ]
+    },
+    {
+      "id": "A18",
+      "kind": "s_curve",
+      "xy": [
+        12.5,
+        9.8
+      ],
+      "yaw_deg": -15,
+      "table_height_m": 0.988,
+      "plate_thickness_m": 0.012,
+      "rib_height_m": 0.15,
+      "curve_length_m": 1.0,
+      "curve_amplitude_m": 0.1,
+      "torch_roll_deg": 180,
+      "segment_length_m": 0.15,
+      "segment_torch_roll_deg": {
+        "open_S_root.00": 180.0,
+        "open_S_root.04": 180.0,
+        "open_S_root.03": 180.0,
+        "open_S_root.01": 0.0,
+        "open_S_root.02": 0.0,
+        "open_S_root.07": 0.0,
+        "open_S_root.08": 0.0,
+        "open_S_root.05": 225.0,
+        "open_S_root.06": 315.0
+      },
+      "access_design": "free floor around table; stance requires full folded-body and TCP-pose collision checks"
+    },
+    {
+      "id": "A19",
+      "kind": "t_joint",
+      "xy": [
+        -12.5,
+        13.1
+      ],
+      "yaw_deg": 0,
+      "table_height_m": 0.988,
+      "plate_thickness_m": 0.012,
+      "rib_height_m": 0.18,
+      "segment_torch_roll_deg": {
+        "root_front.03": 0.0,
+        "root_front.00": 0.0,
+        "root_front.01": 0.0,
+        "root_front.02": 0.0
+      },
+      "access_design": "free floor around table; stance requires full folded-body and TCP-pose collision checks"
+    },
+    {
+      "id": "A20",
+      "kind": "s_curve",
+      "xy": [
+        -7.5,
+        13.1
+      ],
+      "yaw_deg": 15,
+      "table_height_m": 1.138,
+      "plate_thickness_m": 0.012,
+      "rib_height_m": 0.15,
+      "curve_length_m": 1.0,
+      "curve_amplitude_m": 0.1,
+      "torch_roll_deg": 180,
+      "segment_length_m": 0.15,
+      "segment_torch_roll_deg": {
+        "open_S_root.00": 180.0,
+        "open_S_root.04": 180.0,
+        "open_S_root.03": 180.0,
+        "open_S_root.01": 0.0,
+        "open_S_root.02": 0.0,
+        "open_S_root.07": 0.0,
+        "open_S_root.08": 0.0,
+        "open_S_root.05": 315.0,
+        "open_S_root.06": 315.0
+      },
+      "access_design": "free floor around table; stance requires full folded-body and TCP-pose collision checks"
+    },
+    {
+      "id": "A21",
+      "kind": "t_joint",
+      "xy": [
+        -2.5,
+        13.1
+      ],
+      "yaw_deg": -15,
+      "table_height_m": 0.238,
+      "plate_thickness_m": 0.012,
+      "rib_height_m": 0.18,
+      "segment_torch_roll_deg": {
+        "root_front.03": 0.0,
+        "root_front.00": 0.0,
+        "root_front.01": 0.0,
+        "root_front.02": 0.0
+      },
+      "access_design": "free floor around table; stance requires full folded-body and TCP-pose collision checks"
+    },
+    {
+      "id": "A22",
+      "kind": "t_joint",
+      "xy": [
+        2.5,
+        13.1
+      ],
+      "yaw_deg": 0,
+      "table_height_m": 0.538,
+      "plate_thickness_m": 0.012,
+      "rib_height_m": 0.18,
+      "segment_torch_roll_deg": {
+        "root_front.03": 0.0,
+        "root_front.00": 0.0,
+        "root_front.01": 0.0,
+        "root_front.02": 0.0
+      },
+      "access_design": "free floor around table; stance requires full folded-body and TCP-pose collision checks"
+    },
+    {
+      "id": "A23",
+      "kind": "t_joint",
+      "xy": [
+        7.5,
+        13.1
+      ],
+      "yaw_deg": 15,
+      "table_height_m": 0.838,
+      "plate_thickness_m": 0.012,
+      "rib_height_m": 0.18,
+      "segment_torch_roll_deg": {
+        "root_front.03": 0.0,
+        "root_front.00": 0.0,
+        "root_front.01": 0.0,
+        "root_front.02": 0.0
+      },
+      "access_design": "free floor around table; stance requires full folded-body and TCP-pose collision checks"
+    },
+    {
+      "id": "A24",
+      "kind": "butt_plate",
+      "xy": [
+        12.5,
+        13.1
+      ],
+      "yaw_deg": -15,
+      "table_height_m": 0.7292628869403572,
+      "plate_thickness_m": 0.012,
+      "rib_height_m": 0.18,
+      "access_design": "two adjacent finite-thickness V-prepared plates; front-side approach; full TCP pose and quadruped support/collision required",
+      "incline_deg": 60,
+      "pair_size_m": [
+        1.0,
+        0.56
+      ],
+      "root_gap_m": 0.001,
+      "groove_depth_m": 0.0035,
+      "groove_included_angle_deg": 60,
+      "backing_thickness_m": 0.012,
+      "fixture_lift_m": 0.012,
+      "preparation_band_width_m": 0.02,
+      "root_height_target_m": 1.0,
+      "representative_seam": "butt_center",
+      "torch_roll_deg": 0,
+      "travel_angle_deg": 0,
+      "segment_torch_roll_deg": {
+        "butt_center.01": 0.0,
+        "butt_center.00": 0.0,
+        "butt_center.02": 0.0,
+        "butt_center.03": 0.0
+      },
+      "plate_colors_rgb": [
+        [
+          0.42,
+          0.45,
+          0.48
+        ],
+        [
+          0.49,
+          0.52,
+          0.54
+        ]
+      ],
+      "prepared_color_rgb": [
+        0.78,
+        0.8,
+        0.81
+      ]
+    }
+  ],
+  "parallel": {
+    "id": "B01",
+    "xy": [
+      -8.0,
+      -4.4
+    ],
+    "size_m": [
+      12.0,
+      3.6
+    ],
+    "plate_thickness_m": 0.012,
+    "rib_height_m": 0.2,
+    "rib_spacing_m": 0.7,
+    "rib_count": 5,
+    "entry_width_m": 2.1,
+    "segment_torch_roll_deg": {
+      "parallel_0_west_side-1.00": 0.0,
+      "parallel_0_west_side-1.01": 0.0,
+      "parallel_0_west_side-1.02": 0.0,
+      "parallel_0_west_side-1.03": 0.0,
+      "parallel_0_west_side-1.04": 0.0,
+      "parallel_0_west_side-1.05": 0.0,
+      "parallel_0_west_side-1.06": 0.0,
+      "parallel_0_west_side-1.07": 0.0,
+      "parallel_0_west_side-1.08": 0.0,
+      "parallel_0_west_side-1.09": 180.0,
+      "parallel_0_west_side-1.10": 0.0,
+      "parallel_0_west_side-1.11": 0.0,
+      "parallel_0_west_side-1.12": 0.0,
+      "parallel_0_west_side-1.13": 0.0,
+      "parallel_0_west_side-1.14": 0.0,
+      "parallel_0_west_side-1.15": 0.0,
+      "parallel_0_west_side-1.16": 0.0,
+      "parallel_0_west_side-1.17": 180.0
+    }
+  },
+  "grid": {
+    "id": "B02",
+    "xy": [
+      7.5,
+      -5.5
+    ],
+    "size_m": [
+      10.0,
+      6.2
+    ],
+    "plate_thickness_m": 0.012,
+    "rib_height_m": 0.22,
+    "cross_lane_width_m": 2.1,
+    "longitudinal_rib_y_m": [
+      -2.075,
+      2.075
+    ],
+    "transverse_rib_x_m": [
+      -3.025,
+      3.025
+    ],
+    "segment_torch_roll_deg": {
+      "long_0_west_side-1.00": 0.0,
+      "long_0_west_side-1.02": 0.0,
+      "long_0_west_side-1.03": 0.0,
+      "long_0_west_side-1.04": 0.0,
+      "long_0_west_side-1.05": 0.0,
+      "long_0_west_side-1.01": 0.0,
+      "long_0_west_side-1.06": 0.0,
+      "long_0_west_side-1.07": 0.0,
+      "long_0_west_side-1.08": 0.0,
+      "long_0_west_side-1.09": 0.0,
+      "long_0_west_side-1.10": 0.0,
+      "long_0_west_side-1.11": 0.0,
+      "long_0_west_side-1.12": 0.0,
+      "long_0_west_side-1.13": 0.0,
+      "long_0_west_side-1.14": 0.0
+    }
+  },
+  "obstacles": [
+    {
+      "id": "steel_rack",
+      "xy": [
+        14.9,
+        -9.7
+      ],
+      "size_m": [
+        0.7,
+        2.8,
+        1.5
+      ]
+    },
+    {
+      "id": "power_cabinet",
+      "xy": [
+        14.9,
+        -3.0
+      ],
+      "size_m": [
+        0.6,
+        1.1,
+        1.35
+      ]
+    },
+    {
+      "id": "welding_supply",
+      "xy": [
+        14.9,
+        11.8
+      ],
+      "size_m": [
+        0.5,
+        0.65,
+        0.9
+      ]
+    }
+  ],
+  "map": {
+    "resolution_m": 0.1,
+    "envelope_radius_m": 0.85,
+    "folded_height_m": 1.7,
+    "source": "ground truth scene geometry; NOT SLAM"
+  },
+  "appearance": {
+    "steel_uv_repeats_per_m": 2.0,
+    "steel_metallic": 0.78,
+    "description": "procedural rolled steel, mill scale, sparse oxidation; not measured material"
+  },
+  "lighting": {
+    "dome_intensity": 1000.0,
+    "dome_color": [
+      1.0,
+      0.985,
+      0.96
+    ],
+    "key_intensity": 650.0,
+    "key_angle_deg": 40.0,
+    "fill_intensity": 180.0,
+    "fill_size_m": [
+      6.0,
+      4.5
+    ],
+    "fill_height_m": 5.3,
+    "fill_positions_xy_m": [
+      [
+        -9,
+        3
+      ],
+      [
+        9,
+        3
+      ],
+      [
+        -9,
+        10
+      ],
+      [
+        9,
+        10
+      ],
+      [
+        -8,
+        -3
+      ],
+      [
+        8,
+        -3
+      ],
+      [
+        -8,
+        -10
+      ],
+      [
+        8,
+        -10
+      ]
+    ],
+    "fill_target_offset_y_m": 2.0
+  },
+  "additional_panels": [
+    {
+      "id": "B03",
+      "xy": [
+        -8.0,
+        -11.0
+      ],
+      "size_m": [
+        10.0,
+        5.6
+      ],
+      "plate_thickness_m": 0.012,
+      "rib_height_m": 0.22,
+      "cross_lane_width_m": 2.1,
+      "longitudinal_rib_y_m": [
+        -1.925,
+        1.925
+      ],
+      "transverse_rib_x_m": [
+        -3.025,
+        3.025
+      ],
+      "segment_torch_roll_deg": {
+        "long_0_west_side-1.00": 0.0,
+        "long_0_west_side-1.01": 0.0,
+        "long_0_west_side-1.02": 0.0,
+        "long_0_west_side-1.03": 0.0,
+        "long_0_west_side-1.04": 0.0,
+        "long_0_west_side-1.05": 0.0,
+        "long_0_west_side-1.06": 0.0,
+        "long_0_west_side-1.07": 0.0,
+        "long_0_west_side-1.08": 0.0,
+        "long_0_west_side-1.09": 0.0,
+        "long_0_west_side-1.10": 0.0,
+        "long_0_west_side-1.11": 0.0,
+        "long_0_west_side-1.12": 0.0,
+        "long_0_west_side-1.13": 0.0,
+        "long_0_west_side-1.14": 0.0
+      },
+      "kind": "grid_panel"
+    },
+    {
+      "id": "B04",
+      "xy": [
+        7.5,
+        -12.0
+      ],
+      "size_m": [
+        10.0,
+        2.8
+      ],
+      "plate_thickness_m": 0.012,
+      "rib_height_m": 0.2,
+      "rib_spacing_m": 0.65,
+      "rib_count": 4,
+      "entry_width_m": 2.1,
+      "segment_torch_roll_deg": {
+        "parallel_0_west_side-1.00": 0.0,
+        "parallel_0_west_side-1.01": 0.0,
+        "parallel_0_west_side-1.02": 0.0,
+        "parallel_0_west_side-1.03": 0.0,
+        "parallel_0_west_side-1.04": 0.0,
+        "parallel_0_west_side-1.05": 0.0,
+        "parallel_0_west_side-1.06": 0.0,
+        "parallel_0_west_side-1.07": 0.0,
+        "parallel_0_west_side-1.08": 0.0,
+        "parallel_0_west_side-1.09": 0.0,
+        "parallel_0_west_side-1.10": 0.0,
+        "parallel_0_west_side-1.11": 0.0,
+        "parallel_0_west_side-1.12": 0.0,
+        "parallel_0_west_side-1.14": 180.0,
+        "parallel_0_west_side-1.13": 180.0
+      },
+      "kind": "parallel_panel"
+    }
+  ]
+}
