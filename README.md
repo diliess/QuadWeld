@@ -145,6 +145,53 @@ CSV 按 `image,path_id,geometry_run` 分组，排除 `geometry_run=-1`，按 `sa
 
 ## 工业焊接场景
 
+### Nested 双目与相机参数深度
+
+已支持同步左右目 RGB 与内外参共同输入 `DA3NESTED-GIANT-LARGE-1.1`，
+按已知 90 mm 基线恢复尺度，输出左右目米制深度。新增同步采集、推理和独立 RTX
+真值评价脚本；提供单目、无标定双目、有标定双目的相同像素对照。
+本次 A02/A04 工件内部 MAE 为 2.93–4.32 mm，全画面仍有明显误差。
+复跑命令、输入格式和评价限制见 [Nested 双目深度说明](docs/nested_stereo_depth.md)。
+
+继续核对焊缝空间位置与可视化：
+
+```bash
+.venv/bin/python scripts/benchmark_stereo_seams.py --gpu 0
+```
+
+输出原图、深度图、自动接缝与名义真值叠加、三维误差和覆盖率。
+默认处理 A04 类角接缝；错误或不完整的 SAM 选区未形成角缝时会启用整图几何回退。
+初始姿态左右目均已恢复三条接触线候选，详见 [A04 角接缝定位](docs/a04_corner_localization.md)。
+
+现已将 A04 **三条交线全部按焊缝**，完成 9 组真实机械臂关节姿态、18 目测试。
+使用 `.venv/bin/python scripts/benchmark_a04_arm_angles.py --gpu 0` 复跑。
+逐缝误差、覆盖率与机械臂/原图/深度可视化见 [机械臂多角度测试](docs/a04_arm_angle_test.md)。
+
+A15、A03、A21 的 T 接头已各采集一组尽量看全腹板和底板的臂载双目初始视角，
+并核对 Nested 深度与前侧焊缝位置。使用 `.venv/bin/python scripts/benchmark_station_overviews.py --gpu 0` 复跑；
+视角、误差与结果入口见 [三工位整体视角测试](docs/t_station_overviews.md)。
+同一观察位姿下的无焊枪视野复测采用50 mm仿真支架偏置，像素级验证六目焊枪占用为0，见 [无焊枪复测](docs/t_station_unobstructed.md)。
+已将目标拉近至650 mm工作距离，每工位采用左中右三个重叠机械臂视角，见 [近距离工作范围复测](docs/t_station_close_views.md)。
+最新完成每工件六张图片的一次联合推理，见 [原图、预测焊缝投影与平均误差](outputs/benchmarks/t_station_joint_20261110_01/README.md)。
+使用 `.venv-da3/bin/python scripts/benchmark_joint_station_views.py --gpu 0` 复跑。
+
+另已按左右目均完整入画并预留 8% 画幅余量，为三个工位保存新的机器狗与机械臂站位。
+相机至工件中心约 1.90–1.98 m，六目均无焊枪遮挡；
+站位、原图与可打开的 USD 见 [双目完整观察站位](outputs/benchmarks/t_station_full_frame_20261110_01/README.md)。
+此距离用于整体观察，超出 HJ-90 文档的 300–800 mm 标称测量工作距离。
+已在相同机器狗站位下采集三个机械臂角度，并完成每工件六图联合深度、前景板件分割和焊缝识别，
+见 [整体距离多视角结果](outputs/benchmarks/t_station_full_joint_20261110_01/README.md)；
+复现命令、双目对照及评价口径见 [流程说明](docs/t_station_full_multiview.md)。
+
+### 双目平面交线焊缝定位
+
+同一批整体距离与近距离采集已用不依赖深度模型尺度的方法复测：SAM3 只提供两块板的粗掩码，
+每块板的三参数视差平面由左右目图像直接对齐求出，焊缝取两平面交线，米制尺度只来自双目标定。
+整体距离（约1.95 m）9组单视图线误差平均3.5 mm，近距离（0.65 m）平均0.6 mm；
+方法、复现命令、扰动测试与限制见 [双目平面交线说明](docs/stereo_plane_seam.md)。
+已按该流程重新完成三个工位、两种距离、18组双目的拟合与融合测试，
+原图、SAM3掩码、实际拟合像素和焊缝真值叠加见 [多工位分阶段可视化报告](outputs/benchmarks/stereo_plane_stations_20261111_01/README.md)。
+
 ### DA3 多样本深度评价
 
 ```bash
@@ -162,6 +209,27 @@ DA3 只接收 RGB；渲染器光轴深度仅用于离线评价。
 
 `--resume --output-dir <目录>` 可恢复已校验的采集和推理；
 `--evaluate-only --output-dir <目录>` 可在 CPU 上重新计算已有结果。
+
+### DA3 背景与参照物对照
+
+```bash
+.venv/bin/python scripts/benchmark_da3_background.py --gpu 0
+```
+
+固定 A01 近景的工件、相机位姿、内参、灯光及机器人初始状态，仅改变背景：
+原始车间、移除其他工位、灰平面、棋盘格平面、增加立方体，再恢复原始背景。
+场景变更仅在内存中生效。除直接渲染结果外，脚本还生成原始工位 RGB 像素完全固定的
+背景替换对照，排除反射、阴影或渲染噪声对工件外观的影响。
+DA3 只接收 RGB，参照物尺寸和相机真值不传入模型。每张图片独立重设随机种子，
+所有条件使用同一组板面内部像素评价，不做尺度或偏移校正。
+默认每个背景重拍三次（`--repeats` 可调整），每轮末尾恢复原始背景，报告均值、
+标准差和范围；这些重拍用于检查渲染波动，不算作独立工件样本。
+
+输出至 `outputs/benchmarks/da3_background_<时间戳>/`，包含输入与误差图、
+逐项数据、相机及灯光属性记录。支持 `--resume` 和 `--evaluate-only`。
+`--wait-for-gpu` 会等待空闲显存达到 12 GB 后执行，等待状态记录在 `status.json`。
+这是单一固定视角的背景敏感性实验，不代表所有工位的精度。
+已完成三轮复测，统计与限制见 [背景对照实验记录](docs/da3_background_study.md)。
 
 保留 [`assets/scenes/industrial-welding/`](assets/scenes/industrial-welding/README.md) 完整场景包，
 包括 B2/E05L-Pro/HJ-90、工位、相机、贴图和四个拍摄姿态。
@@ -182,8 +250,12 @@ uv run --locked --extra usd python scripts/import_industrial_welding.py
 main.py                   A04 正常初始臂姿加载、RGB 拍照与识别总入口
 scripts/auto_weld.py       图片输入、SAM 推理、流程编排和结果导出
 scripts/predict_depth.py   DA3 模型工作进程
+scripts/benchmark_da3.py   多工位、多视角原始深度评价
+scripts/benchmark_da3_background.py  固定视角的背景对照评价
 scripts/import_industrial_welding.py  工业场景导入
 vision/weld_detector.py    板面拟合、接触交线、焊道筛选及状态分段
+vision/stereo_seam.py      标定双目的板面视差平面拟合、平面交线焊缝与多视角合并
+scripts/stereo_seam.py     单组双目图像的焊缝三维轨迹入口
 vision/weld_toes.py        成对焊趾定位
 vision/weld_surfaces.py    局部承接表面和三维连续性检查
 vision/skeleton.py         焊道掩码骨架细化
@@ -193,3 +265,16 @@ assets/scenes/industrial-welding/  工业焊接场景包
 
 基础 `pyproject.toml` 用于 CPU 后处理依赖；完整识别使用模型环境的依赖文件。
 `usd` 是场景导入脚本的可选依赖，RGB 识别流程无需安装它。
+
+
+## HJ-90 双目与中央激光扫描
+
+新增按仿真标定实现的主动扫描入口：90 mm 基线双目、中央蓝色线光投射、摆动扫描、RGB 条纹检测、双目三角测量及米制点云。保留正常初始臂姿：
+
+```bash
+.venv/bin/python main.py --sensor hj90 --headless
+```
+
+原默认单张 RGB → DA3/SAM 流程保留为 `--sensor rgb`。HJ-90 扫描不调用 DA3，RTX 深度仅可选用于评价。
+使用方式、可配置参数、A02/A04 实测、输出与模型边界见 [双目激光说明](docs/hj90_active_stereo.md)。
+该实现不是原厂光学/固件的完全等价模型，未达到或认证宣传册精度。
