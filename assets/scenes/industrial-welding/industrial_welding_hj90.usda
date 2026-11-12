@@ -1,0 +1,61 @@
+#usda 1.0
+(
+    defaultPrim = "World"
+    metersPerUnit = 1
+    subLayers = [
+        @industrial_welding_A04_initial_arm_photo.usda@
+    ]
+    upAxis = "Z"
+)
+
+over "World"
+{
+    over "Robot"
+    {
+        over "e05l_welding_torch"
+        {
+            def Xform "hj90_active"
+            {
+                custom string hj90:calibration = '{"model": "SVersion-HJ-90", "calibration_status": "simulation assumptions; replace with measured stereo/laser calibration for real hardware", "image_size_wh": [640, 1100], "intrinsics": [[767.6161919040479, 0, 320], [0, 767.8883071553229, 550], [0, 0, 1]], "distortion_left": [0, 0, 0, 0, 0], "distortion_right": [0, 0, 0, 0, 0], "baseline_m": 0.09, "working_distance_m": [0.3, 0.8], "laser_origin_optical_m": [0, 0.004, 0], "laser_wavelength_nm": 450, "laser_rgb": [0.015, 0.035, 1.0], "laser_intensity": 500, "laser_sigma_rad": 0.0015, "laser_fan_half_angle_deg": 40, "scan_half_angle_deg": 23, "scan_lines": 640, "full_scan_duration_s": 0.4, "max_line_rate_hz": 5000, "max_full_frame_fps": 6, "detector": {"threshold_255": 5, "centroid_radius_px": 8, "peak_ratio": 0.7, "max_stripe_width_px": 18, "plane_tolerance_m": 0.0005}, "unmeasured": ["individual lens intrinsics/distortion", "laser extrinsics and divergence", "laser radiometric power and spectral response", "mirror angle calibration", "camera exposure/gain/noise", "scan timing and firmware", "protective lid mechanics"]}'
+                matrix4d xformOp:transform = ( (-2.220446049250313e-16, -1.0000000000000002, -1.4782794558091703e-16, 0), (-1.0000000000000002, -2.220446049250313e-16, -2.5363265666181668e-17, 0), (2.5363265666181668e-17, 1.4782794558091703e-16, -1.0000000000000004, 0), (-0.053, -0.104, 0.11810000000000001, 1) )
+                uniform token[] xformOpOrder = ["xformOp:transform"]
+
+                def Camera "left"
+                {
+                    float2 clippingRange = (0.005, 100)
+                    float focalLength = 16.753927
+                    float horizontalAperture = 13.968586
+                    float verticalAperture = 24
+                    double3 xformOp:translate = (-0.045, 0, 0)
+                    uniform token[] xformOpOrder = ["xformOp:translate"]
+                }
+
+                def Camera "right"
+                {
+                    float2 clippingRange = (0.005, 100)
+                    float focalLength = 16.753927
+                    float horizontalAperture = 13.968586
+                    float verticalAperture = 24
+                    double3 xformOp:translate = (0.045, 0, 0)
+                    uniform token[] xformOpOrder = ["xformOp:translate"]
+                }
+
+                def RectLight "laser"
+                {
+                    custom string hj90:status = "RGB radiometric approximation of 450 nm; unknown power/divergence; not coherent wave optics"
+                    custom float hj90:wavelengthNm = 450
+                    color3f inputs:color = (0.015, 0.035, 1)
+                    float inputs:height = 1.6781993
+                    float inputs:intensity = 500
+                    bool inputs:normalize = 0
+                    asset inputs:texture:file = @textures/hj90_laser_profile.png@
+                    float inputs:width = 2
+                    custom bool isProjector = 1
+                    float xformOp:rotateY = 0
+                    double3 xformOp:translate = (0, -0.004, 0)
+                    uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:rotateY"]
+                }
+            }
+        }
+    }
+}

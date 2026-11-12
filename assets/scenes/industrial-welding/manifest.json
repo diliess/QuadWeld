@@ -128,6 +128,15 @@
       "rigid_bodies": 24,
       "revolute_joints": 18,
       "colliders": 1155
+    },
+    "active_stereo_laser": {
+      "layer": "industrial_welding_hj90.usda",
+      "cameras": {
+        "left": "/World/Robot/e05l_welding_torch/hj90_active/left",
+        "right": "/World/Robot/e05l_welding_torch/hj90_active/right"
+      },
+      "laser": "/World/Robot/e05l_welding_torch/hj90_active/laser",
+      "calibration": "source/hj90_sim_calibration.json"
     }
   },
   "hj90_camera": {
@@ -236,88 +245,104 @@
   "files": [
     {
       "path": "industrial_welding.usda",
-      "sha256": "bd77bb09c7ec2423ec7885275775501e418b009e506980551c9798a7ac9b08a9",
-      "bytes": 299
+      "bytes": 299,
+      "sha256": "bd77bb09c7ec2423ec7885275775501e418b009e506980551c9798a7ac9b08a9"
     },
     {
       "path": "industrial_welding.usdc",
-      "sha256": "7553a8b6bbca45ce755b93ff211e9c8379bb3983ff908ceaf109818575195036",
-      "bytes": 12384819
+      "bytes": 12384819,
+      "sha256": "7553a8b6bbca45ce755b93ff211e9c8379bb3983ff908ceaf109818575195036"
     },
     {
       "path": "industrial_welding_A02_photo.usda",
-      "sha256": "4f7eebde8f01a7d34729569956be2013b45c5b8339a039c1f5d65907f12a8fd3",
-      "bytes": 10902
+      "bytes": 10902,
+      "sha256": "4f7eebde8f01a7d34729569956be2013b45c5b8339a039c1f5d65907f12a8fd3"
     },
     {
       "path": "industrial_welding_A04_initial_arm_photo.usda",
-      "sha256": "e26eccd8885f4b751075c63cf18b711a6b1b7f0ef408b4414d53fee64640ae9f",
-      "bytes": 10878
+      "bytes": 10878,
+      "sha256": "e26eccd8885f4b751075c63cf18b711a6b1b7f0ef408b4414d53fee64640ae9f"
     },
     {
       "path": "industrial_welding_A04_longside_photo.usda",
-      "sha256": "92b7bc9c0766dd1fe2346a6ee3305df0e3f3d5f1145bafbe11c0fe9d600b0bd6",
-      "bytes": 10920
+      "bytes": 10920,
+      "sha256": "92b7bc9c0766dd1fe2346a6ee3305df0e3f3d5f1145bafbe11c0fe9d600b0bd6"
     },
     {
       "path": "industrial_welding_A04_photo.usda",
-      "sha256": "b1c40ae27816f5193acf91293c4c57e298ad15775ff063143965cf8aa6add9d5",
-      "bytes": 10909
+      "bytes": 10909,
+      "sha256": "b1c40ae27816f5193acf91293c4c57e298ad15775ff063143965cf8aa6add9d5"
     },
     {
       "path": "industrial_welding_full.usda",
-      "sha256": "b373b42dc5de857d2f7db20a04a797e930327c47ed52bbb738517da808170de5",
-      "bytes": 145
+      "bytes": 128,
+      "sha256": "0a2c2bd12a67ba11a0ac48e7317af689d1ad52fcd1f08f7328884821648c661f"
+    },
+    {
+      "path": "industrial_welding_hj90.usda",
+      "bytes": 3535,
+      "sha256": "cf22108ec4f6e4cd04704c90a3cb4bbe6f170e588e03ec54452a02ce95ca38c3"
     },
     {
       "path": "licenses/RoboSimStudio.LICENSE",
-      "sha256": "243b5de614a38e490ec5de01fce7bb73d84cd0bb1f8f32b0bca12cd1b58714a1",
-      "bytes": 11343
+      "bytes": 11343,
+      "sha256": "243b5de614a38e490ec5de01fce7bb73d84cd0bb1f8f32b0bca12cd1b58714a1"
     },
     {
       "path": "licenses/RoboSimStudio.NOTICE",
-      "sha256": "4697a48218530b709d6ba8141f440ff80fb61fffc322c5b64d8bd80d5d3e03e2",
-      "bytes": 2653
+      "bytes": 2653,
+      "sha256": "4697a48218530b709d6ba8141f440ff80fb61fffc322c5b64d8bd80d5d3e03e2"
     },
     {
       "path": "licenses/robot_models.LICENSE",
-      "sha256": "4ea44fef12365648550aab7f5f843930612f6378ea01608bc5d8778ff2cc05c4",
-      "bytes": 14440
+      "bytes": 14440,
+      "sha256": "4ea44fef12365648550aab7f5f843930612f6378ea01608bc5d8778ff2cc05c4"
     },
     {
       "path": "source/config.json",
-      "sha256": "963b57a0d6df8b51c734eb29f7983ce312bf65b02bf32012450c4aa5a1105f9c",
-      "bytes": 28663
+      "bytes": 28663,
+      "sha256": "963b57a0d6df8b51c734eb29f7983ce312bf65b02bf32012450c4aa5a1105f9c"
     },
     {
       "path": "source/hj90_datasheet.md",
-      "sha256": "f23839ba9f03439b285ac91858c46f3ec5f6901e41dfeef765d3438b3d2e743e",
-      "bytes": 6362
+      "bytes": 6362,
+      "sha256": "f23839ba9f03439b285ac91858c46f3ec5f6901e41dfeef765d3438b3d2e743e"
     },
     {
       "path": "source/hj90_physical_validation.json",
-      "sha256": "405f2f3e5c16d816c86112ffda8f853d6d682aa7370fa5f636eb5b8fddb27100",
-      "bytes": 4654
+      "bytes": 4654,
+      "sha256": "405f2f3e5c16d816c86112ffda8f853d6d682aa7370fa5f636eb5b8fddb27100"
+    },
+    {
+      "path": "source/hj90_sim_calibration.json",
+      "bytes": 1377,
+      "sha256": "29057a36fa8b3bb88fab77d3b3160c36b7b1dd7f8570622a430ec09a7772c0d6"
     },
     {
       "path": "source/usd_manifest.json",
-      "sha256": "f538b81362aeb351f145d13faf8c3be308216fcd6a320d4203cc9a3f1b54bc45",
-      "bytes": 18230
+      "bytes": 18230,
+      "sha256": "f538b81362aeb351f145d13faf8c3be308216fcd6a320d4203cc9a3f1b54bc45"
+    },
+    {
+      "path": "textures/hj90_laser_profile.png",
+      "bytes": 245,
+      "sha256": "82cb366a6d462008976db10eb627277ce21c2a0ef4fec024da60c39516874b42"
     },
     {
       "path": "textures/rolled_steel_albedo.png",
-      "sha256": "19a769ff1c181111bea0a17458ab7ae505aa3626401e38c4993c14eb120282c5",
-      "bytes": 789836
+      "bytes": 789836,
+      "sha256": "19a769ff1c181111bea0a17458ab7ae505aa3626401e38c4993c14eb120282c5"
     },
     {
       "path": "textures/rolled_steel_normal.png",
-      "sha256": "7169562c4311f062bd5ea2044a7270ed7cf1a11ec99ca9677fe184e56cdffb0f",
-      "bytes": 1139869
+      "bytes": 1139869,
+      "sha256": "7169562c4311f062bd5ea2044a7270ed7cf1a11ec99ca9677fe184e56cdffb0f"
     },
     {
       "path": "textures/rolled_steel_roughness.png",
-      "sha256": "d78c6b7255b1742dd1f45101975f36520f96d579a1a69d5ac97e5f4edd8cf134",
-      "bytes": 172736
+      "bytes": 172736,
+      "sha256": "d78c6b7255b1742dd1f45101975f36520f96d579a1a69d5ac97e5f4edd8cf134"
     }
-  ]
+  ],
+  "sensor_scope": "two independent pinhole cameras and RTX line projector; RGB-only scan reconstruction; unmeasured calibration assumptions"
 }

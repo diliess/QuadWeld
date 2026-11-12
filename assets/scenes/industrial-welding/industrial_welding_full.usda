@@ -3,5 +3,5 @@
     defaultPrim = "World"
     metersPerUnit = 1
     upAxis = "Z"
-    subLayers = [@industrial_welding_A04_initial_arm_photo.usda@]
+    subLayers = [@industrial_welding_hj90.usda@]
 )

@@ -1,0 +1,79 @@
+{
+  "model": "SVersion-HJ-90",
+  "calibration_status": "simulation assumptions; replace with measured stereo/laser calibration for real hardware",
+  "image_size_wh": [
+    640,
+    1100
+  ],
+  "intrinsics": [
+    [
+      767.6161919040479,
+      0,
+      320
+    ],
+    [
+      0,
+      767.8883071553229,
+      550
+    ],
+    [
+      0,
+      0,
+      1
+    ]
+  ],
+  "distortion_left": [
+    0,
+    0,
+    0,
+    0,
+    0
+  ],
+  "distortion_right": [
+    0,
+    0,
+    0,
+    0,
+    0
+  ],
+  "baseline_m": 0.09,
+  "working_distance_m": [
+    0.3,
+    0.8
+  ],
+  "laser_origin_optical_m": [
+    0,
+    0.004,
+    0
+  ],
+  "laser_wavelength_nm": 450,
+  "laser_rgb": [
+    0.015,
+    0.035,
+    1.0
+  ],
+  "laser_intensity": 500,
+  "laser_sigma_rad": 0.0015,
+  "laser_fan_half_angle_deg": 40,
+  "scan_half_angle_deg": 23,
+  "scan_lines": 640,
+  "full_scan_duration_s": 0.4,
+  "max_line_rate_hz": 5000,
+  "max_full_frame_fps": 6,
+  "detector": {
+    "threshold_255": 5,
+    "centroid_radius_px": 8,
+    "peak_ratio": 0.7,
+    "max_stripe_width_px": 18,
+    "plane_tolerance_m": 0.0005
+  },
+  "unmeasured": [
+    "individual lens intrinsics/distortion",
+    "laser extrinsics and divergence",
+    "laser radiometric power and spectral response",
+    "mirror angle calibration",
+    "camera exposure/gain/noise",
+    "scan timing and firmware",
+    "protective lid mechanics"
+  ]
+}

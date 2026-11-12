@@ -101,13 +101,14 @@ def find_python(role, explicit=None, da3_python=None):
 
 def preflight(args, setup):
     interpreters, issues = {}, []
-    roles = ("isaac",) if args.capture_only else ("isaac", "da3", "sam")
+    sensor_only = args.capture_only or args.sensor == "hj90"
+    roles = ("isaac",) if sensor_only else ("isaac", "da3", "sam")
     for role in roles:
         executable, error = find_python(role, getattr(args, f"{role}_python"), interpreters.get("da3"))
         interpreters[role] = executable
         if error:
             issues.append(error)
-    weights = [] if args.capture_only else [
+    weights = [] if sensor_only else [
         ROOT / "thirdparty/sam3/assets/model/sam3.1_multiplex.pt",
         ROOT / "thirdparty/depth-anything-3/weights/DA3NESTED-GIANT-LARGE-1.1/config.json",
         ROOT / "thirdparty/depth-anything-3/weights/DA3NESTED-GIANT-LARGE-1.1/model.safetensors"]
@@ -337,10 +338,13 @@ def parse_args(argv=None):
     parser.add_argument("--model-cache-dir", type=Path, help="Optional DA3/SAM model-output cache")
     parser.add_argument("--semantic-threshold", type=float, default=.25)
     parser.add_argument("--capture-only", action="store_true", help="Capture RGB without running recognition")
+    parser.add_argument("--sensor", choices=("rgb", "hj90"), default="rgb",
+                        help="rgb: existing DA3/SAM workflow; hj90: active stereo/laser scan and metric point cloud")
+    parser.add_argument("--scan-lines", type=int, default=640, help="HJ-90 static laser scan samples")
     parser.add_argument("--check", action="store_true", help="Check environments/assets/GPU without launching Isaac")
     parser.add_argument("--_capture-worker", action="store_true", help=argparse.SUPPRESS)
     args = parser.parse_args(argv)
-    if args.gpu < 0 or not 0 < args.semantic_threshold <= 1:
+    if args.gpu < 0 or args.scan_lines < 1 or not 0 < args.semantic_threshold <= 1:
         parser.error("Use --gpu >= 0 and 0 < --semantic-threshold <= 1")
     stamp = datetime.now(ZoneInfo("Asia/Taipei")).strftime("%Y%m%d_%H%M%S_%f")
     args.output_dir = (args.output_dir or ROOT / "outputs/runs" / f"a04_{stamp}").expanduser().resolve()
@@ -358,6 +362,17 @@ def main(argv=None):
     if args.check:
         print(json.dumps(checked, ensure_ascii=False, indent=2))
         return 0 if checked["ready"] else 1
+    if args.sensor == "hj90":
+        if not checked["ready"]:
+            raise RuntimeError("\n".join(checked["issues"]))
+        command = [sys.executable, str(ROOT / "scripts/scan_hj90.py"), "--pose", POSE,
+                   "--lines", str(args.scan_lines), "--gpu", str(args.gpu),
+                   "--isaac-python", checked["interpreters"]["isaac"],
+                   "--output-dir", str(args.output_dir)]
+        if args.headless:
+            command.append("--headless")
+        subprocess.run(command, cwd=ROOT, env=child_environment(), check=True)
+        return 0
     return execute(args, setup, checked)
 
 

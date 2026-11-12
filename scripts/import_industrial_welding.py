@@ -6,6 +6,7 @@ import json
 from pathlib import Path
 import shutil
 import subprocess
+import sys
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -99,7 +100,13 @@ over "World"
                for p in [*(layer.realPath for layer in layers), *assets]):
             raise ValueError(f"External dependency in {path}")
     commit = subprocess.check_output(["git", "-C", str(source), "rev-parse", "HEAD"], text=True).strip()
-    payload = sorted([*copies, environment.name, full_scene.name])
+    # Rebuild the active stereo/laser layer after replacing the imported base.
+    if str(ROOT) not in sys.path:
+        sys.path.insert(0, str(ROOT))
+    from hj90.optics import load_calibration
+    from hj90.usd import export_layer
+    active_sensor = export_layer(destination, load_calibration())
+    payload = sorted([*copies, environment.name, full_scene.name, *active_sensor["extra_files"]])
     manifest = {
         "asset": environment.name, "default_prim": "/World", "units": "metres", "up_axis": "Z",
         "origin": "original hall floor centre; floor top Z=0; no recentering",
@@ -111,6 +118,7 @@ over "World"
         "full_scene": {"asset": full_scene.name, "robots_included": True,
                        "robot": "B2 + E05L-Pro + welding torch + SVersion-HJ-90",
                        "default_pose": "A04_initial_arm", "poses": poses,
+                       "active_stereo_laser": {k:v for k,v in active_sensor.items() if k != "extra_files"},
                        "hj90_camera": "/World/Robot/e05l_welding_torch/hj90",
                        "counts": {"rigid_bodies": source_manifest["counts"]["robot_bodies"],
                                   "revolute_joints": source_manifest["counts"]["revolute_joints"],
