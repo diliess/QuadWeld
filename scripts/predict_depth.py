@@ -42,9 +42,14 @@ def main():
     os.environ["HF_HUB_OFFLINE"] = "1"
     os.environ.setdefault("MPLCONFIGDIR", "/tmp/quadweld-da3-matplotlib")
 
-    import cv2
-    import numpy as np
-    from PIL import Image
+    model, model_info = load_model(args.model_dir)
+    for image in args.image:
+        predict_image(model, args, image, model_info)
+
+
+def load_model(model_dir, *, stream_blocks=False):
+    """Load and verify the deployed checkpoint; optional exact-dtype CPU offload."""
+    model_dir = Path(model_dir)
     from safetensors import safe_open
     import torch
     from depth_anything_3.api import DepthAnything3
@@ -55,10 +60,10 @@ def main():
     torch.cuda.reset_peak_memory_stats()
     print("Loading local DA3NESTED-GIANT-LARGE-1.1 checkpoint...", flush=True)
     started = time.monotonic()
-    model = DepthAnything3.from_pretrained(str(args.model_dir.resolve()), local_files_only=True)
+    model = DepthAnything3.from_pretrained(str(model_dir.resolve()), local_files_only=True)
     state = model.state_dict(keep_vars=True)
     shared_aliases = {}
-    with safe_open(args.model_dir / "model.safetensors", framework="pt", device="cpu") as file:
+    with safe_open(model_dir / "model.safetensors", framework="pt", device="cpu") as file:
         checkpoint_keys = set(file.keys())
         # Safetensors saves a shared parameter once. DA3 reuses one LayerNorm
         # in four auxiliary heads, so several state-dict names are aliases.
@@ -75,7 +80,11 @@ def main():
                            f"unexpected={sorted(unexpected)[:10]}")
     model_state_keys = len(state)
     del state
-    model = model.to(device="cuda").eval()
+    if stream_blocks:
+        from da3_stereo import stream_transformer_blocks
+        model = stream_transformer_blocks(model).eval()
+    else:
+        model = model.to(device="cuda").eval()
     torch.cuda.synchronize()
     load_seconds = time.monotonic() - started
 
@@ -83,8 +92,7 @@ def main():
         "load_seconds": round(load_seconds, 3), "checkpoint_keys_verified": len(checkpoint_keys),
         "model_state_keys": model_state_keys, "shared_parameter_aliases": shared_aliases,
     }
-    for image in args.image:
-        predict_image(model, args, image, model_info)
+    return model, model_info
 
 
 def predict_image(model, args, image, model_info):
@@ -95,6 +103,9 @@ def predict_image(model, args, image, model_info):
 
     started = time.monotonic()
     # Unrelated photographs must be inferred independently, not as one view set.
+    # DA3 samples pixels during metric alignment. Keep each image independent of
+    # its position in a batch, including controlled background comparisons.
+    torch.manual_seed(0)
     prediction = model.inference([str(image.resolve())], process_res=args.process_res)
     torch.cuda.synchronize()
     inference_seconds = time.monotonic() - started
@@ -155,6 +166,7 @@ def predict_image(model, args, image, model_info):
         **model_info,
         "is_metric": True, "unit": "m", "original_hw": arrays["original_hw"].tolist(),
         "processed_hw": [height, width], "process_res": args.process_res,
+        "random_seed": 0,
         "depth_min_m": float(depth.min()), "depth_median_m": float(np.median(depth)),
         "depth_max_m": float(depth.max()), "all_depth_values_finite_positive": True,
         "inference_seconds": round(inference_seconds, 3),
