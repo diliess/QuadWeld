@@ -473,7 +473,8 @@ def welded_regions(masks, scores, shape):
     return regions
 
 
-def detect(depth, intrinsics, rgb, *, plate_masks=(), weld_masks=(), weld_scores=(), confidence=None):
+def detect(depth, intrinsics, rgb, *, plate_masks=(), weld_masks=(), weld_scores=(), confidence=None,
+           recover_missing_corners=False):
     if rgb.shape != (*depth.shape, 3):
         raise ValueError("RGB must match depth resolution")
     instances, source_indices = [], []
@@ -505,6 +506,23 @@ def detect(depth, intrinsics, rgb, *, plate_masks=(), weld_masks=(), weld_scores
     plates, labels, normals = extract_plates(depth, intrinsics, plate_instances=instances,
                                              exclude_mask=tentative, quality_mask=quality)
     joints = joint_candidates(depth, intrinsics, plates, semantic_plate, instances, normals=normals)
+    sampling_mode = "sam_interiors" if instances else "geometry_fallback_no_sam_plate"
+    recovery = {"enabled": bool(recover_missing_corners), "attempted": False,
+                "semantic_plane_count": len(plates) if instances else 0,
+                "semantic_joint_count": len(joints) if instances else 0,
+                "recovered_joint_count": 0}
+    if recover_missing_corners and instances and not joints:
+        # A nonempty but irrelevant/incomplete SAM mask must not prevent the
+        # corner geometry search. This second hypothesis uses only predicted
+        # depth/quality; semantics no longer gate its fitting domain or contacts.
+        full_plates, full_labels, full_normals = extract_plates(
+            depth, intrinsics, exclude_mask=tentative, quality_mask=quality)
+        full_joints = joint_candidates(depth, intrinsics, full_plates, normals=full_normals)
+        recovery.update(attempted=True, reason="sam_interiors_produced_no_valid_corner",
+                        recovered_plane_count=len(full_plates), recovered_joint_count=len(full_joints))
+        if full_joints:
+            plates, labels, normals, joints = full_plates, full_labels, full_normals, full_joints
+            sampling_mode = "geometry_recovery_after_sam"
     welds = welded_regions(weld_masks, weld_scores, depth.shape)
     contact_band = np.zeros(depth.shape, dtype=np.uint8)
     for joint in joints:
@@ -526,6 +544,6 @@ def detect(depth, intrinsics, rgb, *, plate_masks=(), weld_masks=(), weld_scores
     return {"plates": plates, "labels": labels, "normals": normals, "joints": joints,
             "welds": welds, "semantic_plate_mask": semantic_plate,
             "depth_quality_mask": quality, "confidence_threshold": confidence_threshold,
-            "plate_sampling_mode": "sam_interiors" if instances else "geometry_fallback_no_sam_plate",
+            "plate_sampling_mode": sampling_mode, "corner_recovery": recovery,
             "plate_instance_indices": source_indices,
             "plate_instance_count": len(instances), "interior_plate_instance_count": len(interior)}
