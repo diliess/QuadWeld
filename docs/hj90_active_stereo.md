@@ -25,17 +25,19 @@
 
 ## 使用
 
+2026-11-12 已同步 28 工位场景，默认姿态为 `original`。旧 A02/A04 预设不适用于新布局，已退出当前包；下文历史精度记录仍针对旧场景，新工位需要重新规划拍摄站位。
+
 在 QuadWeld 根目录运行，复用本机已安装的 Isaac 环境：
 
 ```bash
-# 保持 A04 长边站位和正常初始臂姿，执行双目+激光扫描
+# 保持当前源场景正常初始站姿，执行双目+激光扫描
 .venv/bin/python main.py --sensor hj90 --headless
 
-# 工件 A02 的已有拍摄预设；128 线快速检查
-.venv/bin/python scripts/scan_hj90.py --pose A02 --headless --lines 128
+# 当前默认姿态；128 线采集检查（未对准工件）
+.venv/bin/python scripts/scan_hj90.py --pose original --headless --lines 128
 
 # 标准 640 线扫描；只把 RTX 深度用作评价
-.venv/bin/python scripts/scan_hj90.py --pose A02 --headless --lines 640 --evaluate
+.venv/bin/python scripts/scan_hj90.py --pose original --headless --lines 640 --evaluate
 
 # 固定激光角，移动合成试件；验证动态采样，不是机器人动力学
 .venv/bin/python scripts/scan_hj90.py --fixture step --mode dynamic \

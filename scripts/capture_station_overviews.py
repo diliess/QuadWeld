@@ -19,7 +19,8 @@ def prepare(args):
     from hj90.overview_planning import OverviewPlanner, look_at, transform_points, world_matrix
     from hj90.usd import attach, set_laser
 
-    source = ROOT/'assets/scenes/industrial-welding/industrial_welding_A04_initial_arm_photo.usda'
+    from main import scene_setup
+    source = Path(scene_setup()['usd'])
     stage = Usd.Stage.Open(str(source))
     calibration = load_calibration()
     planner = OverviewPlanner(stage, args.collision_model, calibration)

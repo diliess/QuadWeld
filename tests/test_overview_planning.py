@@ -27,8 +27,8 @@ class OverviewFramingTests(unittest.TestCase):
         self.assertEqual(stereo,.5)
 
     def test_three_stations_have_distinct_physical_heights(self):
-        stage=Usd.Stage.Open('assets/scenes/industrial-welding/industrial_welding_A04_initial_arm_photo.usda')
-        for station,height in (('A15',.7),('A03',1.15),('A21',.25)):
+        stage=Usd.Stage.Open('assets/scenes/industrial-welding/industrial_welding.usdc')
+        for station,height in (('A15',.55),('A03',.49),('A21',.31)):
             with self.subTest(station=station):
                 fixture,bounds,vertices,surfaces=t_geometry(stage,station)
                 self.assertAlmostEqual(bounds['base'][1,2],height,places=6)

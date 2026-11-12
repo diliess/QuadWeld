@@ -105,7 +105,7 @@ def capture(args):
                 write_json(output/'evaluation/capture.json',{'pose':pose,'usd':str(asset),
                            'source_usdc_sha256':source_hash,'camera_paths':camera_paths,
                            'world_from_camera_optical':[p.tolist() for p in world_poses],
-                           'station':'A02' if pose=='A02' else 'A04','physics_executed':False,
+                           'station':manifest['full_scene']['poses'][pose].get('station'),'physics_executed':False,
                            'actual_arm_q_rad':[float(np.radians(stage.GetPrimAtPath('/World/Robot/Joints/e05l_joint'+str(j)).GetAttribute(
                                'state:angular:physics:position').Get())) for j in range(1,7)],
                            'truth_usage':'independent evaluation only; not a predictor input'})
@@ -123,7 +123,8 @@ def capture(args):
 
 if __name__=='__main__':
     p=argparse.ArgumentParser(description=__doc__)
-    p.add_argument('--poses',nargs='+',choices=('A04_initial_arm','A02','A04_front','A04_longside'),default=['A04_initial_arm'])
+    scene=json.loads((ROOT/'assets/scenes/industrial-welding/manifest.json').read_text())['full_scene']
+    p.add_argument('--poses',nargs='+',choices=tuple(scene['poses']),default=[scene['default_pose']])
     p.add_argument('--gpu',type=int,default=0)
     p.add_argument('--output-dir',type=Path,required=True)
     a=p.parse_args()

@@ -1,19 +1,19 @@
 {
   "stage": "industrial_welding.usdc",
-  "stage_sha256": "7553a8b6bbca45ce755b93ff211e9c8379bb3983ff908ceaf109818575195036",
+  "stage_sha256": "f655e86ceb38022773fa7d5c7a99e14d2c7db4fe318b6a38cf3db2137267e2f1",
   "units": "m",
   "up_axis": "Z",
   "counts": {
-    "fixtures": 32,
-    "fixture_parts": 1124,
+    "fixtures": 36,
+    "fixture_parts": 1680,
     "surface_preparation_patches": 12,
-    "fixture_colliders": 1087,
+    "fixture_colliders": 1617,
     "robot_bodies": 24,
     "robot_geoms": 203,
     "robot_colliders": 68,
     "revolute_joints": 18,
     "fixed_joints": 5,
-    "seams": 317
+    "seams": 333
   },
   "robot_mass_kg": 97.74102053281072,
   "bodies": [
@@ -668,7 +668,7 @@
       "body1": "/World/Robot/e05l_Link6"
     }
   ],
-  "source_config_sha256": "963b57a0d6df8b51c734eb29f7983ce312bf65b02bf32012450c4aa5a1105f9c",
+  "source_config_sha256": "88764f1f84ab3d16155023a62859d5df5a05f120e4c15d05b0d9f985ab66ae17",
   "hj90_camera": {
     "model": "SVersion-HJ-90",
     "source": "ref/hj90_datasheet.md (V2.2, 2026.10)",

@@ -104,18 +104,28 @@ def set_laser(laser, angle_rad, enabled, calibration):
     laser.GetIntensityAttr().Set(calibration['laser_intensity'] if enabled else 0.)
 
 
-def export_layer(bundle, calibration):
+def export_layer(bundle, calibration, base_layer=None):
     """Write a portable stronger USD layer; keep the original USDC unchanged."""
     import json
     import shutil
     from pxr import Sdf, Usd, UsdGeom
     from .vendor_calibration import DEFAULT_RGB_CALIBRATION, load_rgb_calibration
     bundle = Path(bundle)
+    if base_layer is None:
+        manifest_path = bundle/'manifest.json'
+        if manifest_path.is_file():
+            scene = json.loads(manifest_path.read_text())['full_scene']
+            base_layer = scene['poses'][scene['default_pose']]['asset']
+        else:
+            base_layer = 'industrial_welding.usdc'
+    base = bundle/base_layer
+    if not base.resolve().is_relative_to(bundle.resolve()) or not base.is_file():
+        raise ValueError('Missing or external sensor base layer: '+str(base_layer))
     name = 'industrial_welding_hj90.usda'
     output = bundle/name
     layer = Sdf.Layer.CreateNew(str(output)) if not output.exists() else Sdf.Layer.FindOrOpen(str(output))
     layer.Clear()
-    layer.subLayerPaths = ['industrial_welding_A04_initial_arm_photo.usda']
+    layer.subLayerPaths = [base_layer]
     stage = Usd.Stage.Open(layer)
     UsdGeom.SetStageMetersPerUnit(stage, 1.)
     UsdGeom.SetStageUpAxis(stage, 'Z')

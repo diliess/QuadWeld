@@ -26,7 +26,7 @@ class ThreeContactTests(unittest.TestCase):
             contact_segments(bounds)
 
     def test_reference_tracks_fixture_transform(self):
-        stage = Usd.Stage.Open('assets/scenes/industrial-welding/industrial_welding_A04_initial_arm_photo.usda')
+        stage = Usd.Stage.Open('assets/scenes/industrial-welding/industrial_welding.usdc')
         old = reference_from_stage(stage)
         fixture = stage.GetPrimAtPath('/World/Fixtures/A04')
         previous = np.array(UsdGeom.XformCache().GetLocalToWorldTransform(fixture)).T
@@ -58,8 +58,10 @@ class ThreeContactTests(unittest.TestCase):
 
 class MountedArmTests(unittest.TestCase):
     def test_fk_matches_authored_arm_poses(self):
-        for file in ('industrial_welding_A04_initial_arm_photo.usda', 'industrial_welding_A04_photo.usda',
-                     'industrial_welding_A04_longside_photo.usda'):
+        import json
+        from pathlib import Path
+        scene = json.loads(Path('assets/scenes/industrial-welding/manifest.json').read_text())['full_scene']
+        for file in {pose['asset'] for pose in scene['poses'].values()}:
             with self.subTest(file=file):
                 stage = Usd.Stage.Open('assets/scenes/industrial-welding/'+file)
                 arm = ArmKinematics(stage)
@@ -68,7 +70,7 @@ class MountedArmTests(unittest.TestCase):
                 np.testing.assert_allclose(arm.camera(arm.initial), actual, atol=2e-6)
 
     def test_joint_pose_changes_arm_and_camera_while_base_and_mount_stay_fixed(self):
-        stage = Usd.Stage.Open('assets/scenes/industrial-welding/industrial_welding_A04_initial_arm_photo.usda')
+        stage = Usd.Stage.Open('assets/scenes/industrial-welding/industrial_welding.usdc')
         stage.SetEditTarget(stage.GetSessionLayer())
         arm = ArmKinematics(stage)
         base_before = np.array(UsdGeom.XformCache().GetLocalToWorldTransform(stage.GetPrimAtPath('/World/Robot/base_link')))

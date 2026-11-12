@@ -1,0 +1,174 @@
+{
+  "config_sha256": "88764f1f84ab3d16155023a62859d5df5a05f120e4c15d05b0d9f985ab66ae17",
+  "original_workpieces_retained": true,
+  "A_layout_4_by_7": true,
+  "hall_size_m": [
+    32,
+    40
+  ],
+  "new_workpieces": 4,
+  "specimens": [
+    {
+      "workpiece": "A25",
+      "plate_thickness_m": 0.02,
+      "physical_joint_length_m": 0.9,
+      "weld_and_path_endpoint_error_m": 0.0,
+      "completed_layers": 1,
+      "completed_passes": 2,
+      "beads": [
+        {
+          "part": "A25_first_layer_bead",
+          "side": "front",
+          "volume_m3": 3.5948946446023104e-05,
+          "watertight_edges": true,
+          "finite": true
+        },
+        {
+          "part": "A25_first_layer_bead_back",
+          "side": "back",
+          "volume_m3": 3.5948946446017975e-05,
+          "watertight_edges": true,
+          "finite": true
+        }
+      ],
+      "both_T_sides_deposited": true,
+      "bead_vertices": 72072,
+      "bead_triangles": 144136,
+      "bead_volume_m3": 7.189789289204109e-05,
+      "watertight_edges": true,
+      "finite": true,
+      "contact_slices": 150,
+      "usd_contact_proxies_valid": true,
+      "usd_labels_valid": true,
+      "next_layer_paths": [
+        "A25.layer2_lower",
+        "A25.layer2_upper",
+        "A25.layer2_back_lower",
+        "A25.layer2_back_upper"
+      ],
+      "max_next_path_distance_to_bead_m": 0.000279289030866222,
+      "root_record_completed": true,
+      "next_layer_records_pending": true,
+      "passed": true
+    },
+    {
+      "workpiece": "A26",
+      "plate_thickness_m": 0.02,
+      "physical_joint_length_m": 0.9,
+      "weld_and_path_endpoint_error_m": 0.0,
+      "completed_layers": 1,
+      "completed_passes": 2,
+      "beads": [
+        {
+          "part": "A26_first_layer_bead",
+          "side": "front",
+          "volume_m3": 5.399265954762853e-05,
+          "watertight_edges": true,
+          "finite": true
+        },
+        {
+          "part": "A26_first_layer_bead_back",
+          "side": "back",
+          "volume_m3": 5.3992659547611215e-05,
+          "watertight_edges": true,
+          "finite": true
+        }
+      ],
+      "both_T_sides_deposited": true,
+      "bead_vertices": 72072,
+      "bead_triangles": 144136,
+      "bead_volume_m3": 0.00010798531909523974,
+      "watertight_edges": true,
+      "finite": true,
+      "contact_slices": 150,
+      "usd_contact_proxies_valid": true,
+      "usd_labels_valid": true,
+      "next_layer_paths": [
+        "A26.layer2_lower",
+        "A26.layer2_upper",
+        "A26.layer2_back_lower",
+        "A26.layer2_back_upper"
+      ],
+      "max_next_path_distance_to_bead_m": 0.00025932403615750674,
+      "root_record_completed": true,
+      "next_layer_records_pending": true,
+      "passed": true
+    },
+    {
+      "workpiece": "A27",
+      "plate_thickness_m": 0.02,
+      "physical_joint_length_m": 1.0,
+      "weld_and_path_endpoint_error_m": 0.0,
+      "completed_layers": 1,
+      "completed_passes": 1,
+      "beads": [
+        {
+          "part": "A27_first_layer_bead",
+          "side": "groove",
+          "volume_m3": 1.596658564245511e-05,
+          "watertight_edges": true,
+          "finite": true
+        }
+      ],
+      "both_T_sides_deposited": true,
+      "bead_vertices": 45500,
+      "bead_triangles": 90996,
+      "bead_volume_m3": 1.596658564245511e-05,
+      "watertight_edges": true,
+      "finite": true,
+      "contact_slices": 83,
+      "usd_contact_proxies_valid": true,
+      "usd_labels_valid": true,
+      "next_layer_paths": [
+        "A27.layer2_fill"
+      ],
+      "max_next_path_distance_to_bead_m": 0.00027004521932325,
+      "root_record_completed": true,
+      "next_layer_records_pending": true,
+      "groove_angle_deg": 60,
+      "root_gap_m": 0.0024,
+      "root_face_m": 0.0015000000000000013,
+      "unfilled_groove_depth_m": 0.0153,
+      "passed": true
+    },
+    {
+      "workpiece": "A28",
+      "plate_thickness_m": 0.02,
+      "physical_joint_length_m": 1.0,
+      "weld_and_path_endpoint_error_m": 0.0,
+      "completed_layers": 1,
+      "completed_passes": 1,
+      "beads": [
+        {
+          "part": "A28_first_layer_bead",
+          "side": "groove",
+          "volume_m3": 1.3286747726930482e-05,
+          "watertight_edges": true,
+          "finite": true
+        }
+      ],
+      "both_T_sides_deposited": true,
+      "bead_vertices": 45500,
+      "bead_triangles": 90996,
+      "bead_volume_m3": 1.3286747726930482e-05,
+      "watertight_edges": true,
+      "finite": true,
+      "contact_slices": 83,
+      "usd_contact_proxies_valid": true,
+      "usd_labels_valid": true,
+      "next_layer_paths": [
+        "A28.layer2_fill"
+      ],
+      "max_next_path_distance_to_bead_m": 0.00027004534028357937,
+      "root_record_completed": true,
+      "next_layer_records_pending": true,
+      "groove_angle_deg": 75,
+      "root_gap_m": 0.0015,
+      "root_face_m": 0.0015000000000000013,
+      "unfilled_groove_depth_m": 0.0153,
+      "passed": true
+    }
+  ],
+  "scope": "static first-layer metal, contact proxies and next-layer geometric references; no WPS, sensing, IK, heat or PhysX dynamics validation",
+  "passed": true
+}

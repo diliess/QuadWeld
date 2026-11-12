@@ -1,0 +1,144 @@
+{
+  "schema_version": 1,
+  "passed": true,
+  "local_parent": "fdaf9c8bb5ae02ed99ffe2976d2008297883f7b0",
+  "remote_parent": "182b0493edb52c3f10b547cd0c1d400ed6a844b6",
+  "config_sha256": "88764f1f84ab3d16155023a62859d5df5a05f120e4c15d05b0d9f985ab66ae17",
+  "source_stage_sha256": "f655e86ceb38022773fa7d5c7a99e14d2c7db4fe318b6a38cf3db2137267e2f1",
+  "checks": {
+    "hj90_physical_validation.json": {
+      "passed": true,
+      "sha256": "b30474b524f53c603b09f9f7ef76d5ff2a4f5eef0cda117e703d9d33826f017e"
+    },
+    "geometry_audit.json": {
+      "passed": true,
+      "sha256": "f6158c0b653109ab77563a09a46e17e5fc7baf62f6126999c8cc5ea9927d9203"
+    },
+    "layout_validation.json": {
+      "passed": true,
+      "sha256": "88c56f45c928af1b0fcb99a23544a849d4d691237c5fe4a44c589614862ffea0"
+    },
+    "multilayer_validation.json": {
+      "passed": true,
+      "sha256": "6636d7ec641e256e7ab6797412bfc7d6029df362a14554d6688016a77b1d653a"
+    },
+    "usd/usd_validation.json": {
+      "passed": true,
+      "sha256": "bff205e24e0850cd29bfac82f3a752390cf2f629b44a0c25d60d975f105a1599"
+    }
+  },
+  "isaac": {
+    "isaacsim_version": "6.2.0.0",
+    "rigid_bodies": 24,
+    "revolute_joints": 18,
+    "collision_shapes": 1685,
+    "manifest_counts_match": true,
+    "initial_pose_usd_readback": {
+      "arm_q_rad": [
+        0.0,
+        1.2000000140073657,
+        2.2999999269789098,
+        0.0,
+        1.2999999818851324,
+        0.0
+      ],
+      "arm_drive_q_rad": [
+        0.0,
+        1.2000000140073657,
+        2.2999999269789098,
+        0.0,
+        1.2999999818851324,
+        0.0
+      ],
+      "base_world_position_m": [
+        -14.0,
+        0.0,
+        0.522967966569944
+      ],
+      "matches_generated_initial_pose": true,
+      "passed": true
+    },
+    "weld_info_validation": {
+      "passed": true,
+      "window": "Weld Seam Info",
+      "seams": 333,
+      "workpieces": 32,
+      "dropdown_switch_passed": true,
+      "stage_selection_passed": true,
+      "select_camera_focus_passed": true,
+      "camera_center_error_m": 8.881784197001252e-16,
+      "authored_camera_unchanged": true,
+      "sample_slider_identity_passed": true,
+      "sample_expansion_preserved": true,
+      "expansion_across_seams_passed": true,
+      "latest_rm_targets_passed": null,
+      "A05_sample_source": "Scene TCP reference",
+      "A05_sample_count": 36,
+      "reference_fallback_passed": true,
+      "rm_layout_invalidation_passed": null,
+      "double_sided_deposited_seams_checked": [
+        "A25.root_front",
+        "A25.root_back",
+        "A26.root_front",
+        "A26.root_back"
+      ],
+      "world_pose_refresh_error_m": 2.220446049250313e-16,
+      "sample_switch_passed": true,
+      "highlight_toggle_passed": true,
+      "collisions_unchanged": true,
+      "scope": "native Kit UI, camera, live USD and exported RM prior; no robot or weld execution"
+    },
+    "timeline_playing": false,
+    "physics_executed": false
+  },
+  "hj90_capture": {
+    "resolution_wh": [
+      640,
+      1100
+    ],
+    "working_distance_m": [
+      0.30000001192092896,
+      0.800000011920929
+    ],
+    "valid_fraction": 0.2045497159090909
+  },
+  "pictures": [
+    {
+      "path": "screenshots/isaacsim/area_A.png",
+      "sha256": "7dc680a90159d817b503dc219849b6fd74bd95c521476c096eaf3ffaf2611d3c"
+    },
+    {
+      "path": "screenshots/isaacsim/first_layer_T_back.png",
+      "sha256": "7ed8465e2e7adbd4eaeb77701f21b52ba58bb2d81995315b9035854025121e35"
+    },
+    {
+      "path": "screenshots/isaacsim/first_layer_T_back_macro.png",
+      "sha256": "2c862fd6392f39bc0b4278c9a2b58fec4090496505c87cbbebec8707efda0c07"
+    },
+    {
+      "path": "screenshots/isaacsim/first_layer_butt75_macro.png",
+      "sha256": "8f2023146854f1fb57b60c5539eab89a808e1bafb766eb6978a85077bb4d9a0f"
+    },
+    {
+      "path": "screenshots/isaacsim/first_layer_butt_macro.png",
+      "sha256": "650c9b891e1dece2ebb1abf2c94488b31c55f0bb5542a2ef96a008949219cfd4"
+    },
+    {
+      "path": "screenshots/isaacsim/isaac_editor.png",
+      "sha256": "ddb1ed3fe33304eb6bc4e50823ffa87372cc09d747bd12d727205fbb775dc469"
+    },
+    {
+      "path": "screenshots/isaacsim/overview.png",
+      "sha256": "ca2e8a4ace0f8e14eb8bf4ae969537feb95d8f7e851aa908aae9a57ef751165b"
+    },
+    {
+      "path": "screenshots/isaacsim/robot.png",
+      "sha256": "be25ef0927c7f54f2da9407ad2ac104ca164886f2e5358b2770d8854cd89fabf"
+    },
+    {
+      "path": "screenshots/hj90/initial_28_stations.png",
+      "sha256": "f9b614cb45e204464bf4636afab29a8d2a1f493ec944604444340d077613ba15"
+    }
+  ],
+  "scope": "Static scene integration, source consistency, CPU geometry, HJ90 physical model, actual Isaac GUI and RTX capture. No current work-stance IK, trajectories, gait or dynamic welding validation."
+}

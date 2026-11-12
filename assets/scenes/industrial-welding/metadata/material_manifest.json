@@ -1,0 +1,25 @@
+{
+  "source": "procedural steel_surface.py, seed 418; no external images or reference photo edits",
+  "status": "visual approximation, not measured optical properties",
+  "uv_repeats_per_m": 2.0,
+  "maps": [
+    {
+      "role": "albedo",
+      "path": "textures/rolled_steel_albedo.png",
+      "sha256": "19a769ff1c181111bea0a17458ab7ae505aa3626401e38c4993c14eb120282c5",
+      "color_space": "sRGB"
+    },
+    {
+      "role": "roughness",
+      "path": "textures/rolled_steel_roughness.png",
+      "sha256": "d78c6b7255b1742dd1f45101975f36520f96d579a1a69d5ac97e5f4edd8cf134",
+      "color_space": "raw"
+    },
+    {
+      "role": "normal",
+      "path": "textures/rolled_steel_normal.png",
+      "sha256": "7169562c4311f062bd5ea2044a7270ed7cf1a11ec99ca9677fe184e56cdffb0f",
+      "color_space": "raw"
+    }
+  ]
+}

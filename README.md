@@ -1,7 +1,7 @@
 # QuadWeld
 
 从完整 RGB 图片自动提取三维接缝和已有焊道两侧的焊趾曲线。
-[`main.py`](main.py) 集成 A04 场景加载、HJ-90 拍照及自动识别；
+[`main.py`](main.py) 集成当前场景加载、HJ-90 拍照及自动识别；
 [`scripts/auto_weld.py`](scripts/auto_weld.py) 也可独立处理 RGB 图片。
 无需输入深度、人工选区、点提示或焊接状态。
 
@@ -10,12 +10,11 @@ RGB → DA3 深度与内参 → SAM3 板件/焊道分割 → 板面拟合
     → 接缝交线 / 成对焊趾 → 几何有效性与连续区间 → 结果导出
 ```
 
-## A04 一次拍照与识别
+## 场景拍照与识别
 
-`main.py` 直接加载已保存的 `A04_initial_arm` 场景：机器狗位于 A04 桌子长边，
-机械臂固定为原工程正常初始关节角 `[0, 1.2, 2.3, 0, 1.3, 0]` rad。
-HJ-90 保持焊枪上的固定安装，使用该臂姿下的自然视野，不做朝向目标的 IK 调整。
-此流程是静态摆位拍照，不执行机器狗行走或机械臂运动轨迹。
+`main.py` 加载导入清单中的默认姿态。当前已同步 RoboSimStudio `a14ad12`：32×40 m、28 个 A 工位，A25–A28 带首层焊道和焊纹。默认采用源场景正常初始站姿，基座约 `[-14,0,0.522968]` m，机械臂 `[0,1.2,2.3,0,1.3,0]` rad。
+HJ-90 保持焊枪上的固定安装；初始视线未对准工件，适合检查加载和采集。焊缝识别测试需先为新工位规划视角。旧 A02/A04 拍摄预设已备份并退出当前场景，既有报告和误差属于旧布局。
+此流程不执行机器狗行走或机械臂运动轨迹。
 
 依次执行：加载场景 → 用厂商标定 RGB 通道拍摄一张 3120×4096 图像 → 退出 Isaac 进程释放显存 →
 DA3 预测深度 → SAM3 分割和几何识别。相机内参从当前 USD 相机读取，传给识别流程；
@@ -243,7 +242,7 @@ DA3 只接收 RGB，参照物尺寸和相机真值不传入模型。每张图片
 已完成三轮复测，统计与限制见 [背景对照实验记录](docs/da3_background_study.md)。
 
 保留 [`assets/scenes/industrial-welding/`](assets/scenes/industrial-welding/README.md) 完整场景包，
-包括 B2/E05L-Pro/HJ-90、工位、相机、贴图和四个拍摄姿态。
+包括 B2/E05L-Pro/HJ-90、28 个 A 工位、首层焊纹、相机、贴图和当前初始姿态。
 
 在已有的 Isaac Sim 中通过 File > Open 打开
 `assets/scenes/industrial-welding/industrial_welding_full.usda` 查看完整场景。
@@ -258,7 +257,7 @@ uv run --locked --extra usd python scripts/import_industrial_welding.py
 ## 代码结构
 
 ```text
-main.py                   A04 正常初始臂姿加载、RGB 拍照与识别总入口
+main.py                   当前场景初始臂姿加载、RGB 拍照与识别总入口
 scripts/auto_weld.py       图片输入、SAM 推理、流程编排和结果导出
 scripts/predict_depth.py   DA3 模型工作进程
 scripts/benchmark_da3.py   多工位、多视角原始深度评价

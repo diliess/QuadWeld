@@ -11,7 +11,7 @@ from hj90.optics import load_calibration
 
 class MountOffsetTests(unittest.TestCase):
     def stage(self):
-        stage=Usd.Stage.Open('assets/scenes/industrial-welding/industrial_welding_A04_initial_arm_photo.usda')
+        stage=Usd.Stage.Open('assets/scenes/industrial-welding/industrial_welding.usdc')
         stage.SetEditTarget(stage.GetSessionLayer())
         return stage
 

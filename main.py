@@ -1,4 +1,4 @@
-"""Load A04 with the normal initial arm pose, capture one HJ-90 RGB frame, and run auto_weld."""
+"""Load the imported scene's initial pose, capture HJ-90 RGB, and run auto_weld."""
 
 import argparse
 from datetime import datetime
@@ -14,7 +14,6 @@ from zoneinfo import ZoneInfo
 
 ROOT = Path(__file__).resolve().parent
 BUNDLE = ROOT / "assets/scenes/industrial-welding"
-POSE = "A04_initial_arm"
 INITIAL_ARM_Q = (0., 1.2, 2.3, 0., 1.3, 0.)
 RESOLUTION = (640, 1100)
 
@@ -36,13 +35,18 @@ def child_environment():
     return environment
 
 
-def scene_setup(rgb_profile="legacy", rgb_resolution=None):
+def scene_setup(rgb_profile="legacy", rgb_resolution=None, pose_name=None):
     """Historical benchmark callers retain legacy optics; CLI selects vendor RGB explicitly."""
     manifest = json.loads((BUNDLE / "manifest.json").read_text())
-    pose = manifest["full_scene"]["poses"][POSE]
+    scene = manifest["full_scene"]
+    pose_name = pose_name or scene["default_pose"]
+    if pose_name not in scene["poses"]:
+        raise ValueError(f"Pose {pose_name!r} is unavailable for this scene layout; "
+                         "replan the workstation placement before capturing it")
+    pose = scene["poses"][pose_name]
     if len(pose["arm_q_rad"]) != 6 or any(
             not math.isclose(a, b, abs_tol=1e-8) for a, b in zip(pose["arm_q_rad"], INITIAL_ARM_Q)):
-        raise ValueError("A04_initial_arm must retain the normal initial joint positions")
+        raise ValueError("The default capture pose must retain the normal initial joint positions")
     if rgb_profile not in ("vendor", "legacy"):
         raise ValueError("Unknown HJ-90 RGB profile")
     vendor = None
@@ -52,7 +56,9 @@ def scene_setup(rgb_profile="legacy", rgb_resolution=None):
         sensor = manifest["full_scene"]["active_stereo_laser"]
         if vendor["source_sha256"] != sensor["rgb_calibration"]["source_sha256"]:
             raise ValueError("RGB calibration changed; rebuild with scripts/build_hj90_sensor.py")
-        asset_name = manifest["full_scene"]["asset"]
+        if pose_name != scene["default_pose"]:
+            raise ValueError("The vendor RGB layer is authored for the bundle's default pose")
+        asset_name = scene["asset"]
         camera = sensor["rgb_camera"]
         resolution = vendor["image_size_wh"]
     else:
@@ -61,12 +67,13 @@ def scene_setup(rgb_profile="legacy", rgb_resolution=None):
         resolution = list(rgb_resolution or RESOLUTION)
     asset = (BUNDLE / asset_name).resolve()
     if not asset.is_relative_to(BUNDLE.resolve()) or not asset.is_file():
-        raise FileNotFoundError(f"A04 pose asset not found in the scene bundle: {asset}")
-    return {"pose": POSE, "usd": str(asset), "camera": camera,
+        raise FileNotFoundError(f"Pose asset not found in the scene bundle: {asset}")
+    return {"pose": pose_name, "usd": str(asset), "camera": camera,
+            "context_camera": pose["context_camera"], "station": pose.get("station"),
             "rgb_profile": rgb_profile, "rgb_calibration": vendor,
             "resolution_wh": resolution, "base_xy_yaw": pose["base_xy_yaw"],
             "base_height_m": pose["base_height_m"], "arm_q_rad": pose["arm_q_rad"],
-            "placement": "authored static A04 placement; normal initial arm; no aiming or walking",
+            "placement": pose.get("placement", "source-authored static pose; no movement trajectory"),
             "recorded_static_checks": pose["static_checks"]}
 
 
@@ -172,7 +179,7 @@ def inspect_stage(stage, setup):
     from pxr import UsdGeom, UsdUtils
 
     if not stage or UsdGeom.GetStageUpAxis(stage) != "Z" or UsdGeom.GetStageMetersPerUnit(stage) != 1.:
-        raise ValueError("The imported A04 scene must use metres and Z-up")
+        raise ValueError("The imported scene must use metres and Z-up")
     camera = UsdGeom.Camera(stage.GetPrimAtPath(setup["camera"]))
     if not camera:
         raise ValueError(f"HJ-90 camera missing: {setup['camera']}")
@@ -195,7 +202,7 @@ def inspect_stage(stage, setup):
     position = list(cache.GetLocalToWorldTransform(base).ExtractTranslation())
     expected = [*setup["base_xy_yaw"][:2], setup["base_height_m"]]
     if not np.allclose(position, expected, atol=1e-6, rtol=0):
-        raise ValueError(f"B2 is not at the recorded A04 station position: {position}")
+        raise ValueError(f"B2 is not at the recorded scene position: {position}")
     if camera.GetProjectionAttr().Get() != UsdGeom.Tokens.perspective:
         raise ValueError("HJ-90 must be a perspective camera")
     focal = float(camera.GetFocalLengthAttr().Get())
@@ -233,7 +240,7 @@ def capture_worker(args, setup):
                          "active_gpu": args.gpu, "multi_gpu": False, "open_usd": setup["usd"],
                          "width": resolution[0], "height": resolution[1], "sync_loads": True,
                          "extra_args": ["--/exts/omni.kit.async_engine/keep_loop_running=false",
-                                        "--/app/window/title=QuadWeld | A04 initial arm | HJ-90"]})
+                                        "--/app/window/title=QuadWeld | initial arm | HJ-90"]})
     try:
         import numpy as np
         import omni.replicator.core as rep
@@ -387,7 +394,7 @@ def parse_args(argv=None):
     if args.rgb_resolution and min(args.rgb_resolution) < 1:
         parser.error("RGB width and height must be positive")
     stamp = datetime.now(ZoneInfo("Asia/Taipei")).strftime("%Y%m%d_%H%M%S_%f")
-    args.output_dir = (args.output_dir or ROOT / "outputs/runs" / f"a04_{stamp}").expanduser().resolve()
+    args.output_dir = (args.output_dir or ROOT / "outputs/runs" / f"scene_{stamp}").expanduser().resolve()
     if args.model_cache_dir:
         args.model_cache_dir = args.model_cache_dir.expanduser().resolve()
     return args
@@ -405,7 +412,7 @@ def main(argv=None):
     if args.sensor == "hj90":
         if not checked["ready"]:
             raise RuntimeError("\n".join(checked["issues"]))
-        command = [sys.executable, str(ROOT / "scripts/scan_hj90.py"), "--pose", POSE,
+        command = [sys.executable, str(ROOT / "scripts/scan_hj90.py"), "--pose", setup["pose"],
                    "--lines", str(args.scan_lines), "--gpu", str(args.gpu),
                    "--isaac-python", checked["interpreters"]["isaac"],
                    "--output-dir", str(args.output_dir)]

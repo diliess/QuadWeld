@@ -23,7 +23,8 @@ def write_json(path, value):
 
 def parse_args(argv=None):
     p = argparse.ArgumentParser(description=__doc__)
-    p.add_argument('--pose', choices=('original','A02','A04_front','A04_longside','A04_initial_arm'), default='A04_initial_arm')
+    scene = json.loads((ROOT/'assets/scenes/industrial-welding/manifest.json').read_text())['full_scene']
+    p.add_argument('--pose', choices=tuple(scene['poses']), default=scene['default_pose'])
     p.add_argument('--fixture', choices=('plane','step'), help='Synthetic optical validation target, not a robot placement')
     p.add_argument('--calibration', type=Path, default=ROOT/'calibration/hj90_sim.json')
     p.add_argument('--mode', choices=('static','dynamic'), default='static')

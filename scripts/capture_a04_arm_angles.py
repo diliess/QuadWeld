@@ -74,7 +74,7 @@ def capture(args):
     import numpy as np
     from isaacsim import SimulationApp
     from main import scene_setup
-    setup = scene_setup()
+    setup = scene_setup(pose_name='A04_initial_arm')
     source = Path(setup['usd'])
     source_usdc = ROOT/'assets/scenes/industrial-welding/industrial_welding.usdc'
     source_hash = digest(source_usdc)
@@ -121,7 +121,7 @@ def capture(args):
                     depth = rep.AnnotatorRegistry.get_annotator('distance_to_image_plane')
                     rgb.attach(product); depth.attach(product)
                     products.append(product); rgbs.append(rgb); depths.append(depth)
-                context = rep.create.render_product('/World/Cameras/A04_initial_arm_photo_context', (960, 640))
+                context = rep.create.render_product(setup['context_camera'], (960, 640))
                 context_rgb = rep.AnnotatorRegistry.get_annotator('rgb')
                 context_rgb.attach(context)
                 for _ in range(25):
