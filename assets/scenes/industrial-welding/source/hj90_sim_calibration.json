@@ -1,6 +1,6 @@
 {
   "model": "SVersion-HJ-90",
-  "calibration_status": "simulation assumptions; replace with measured stereo/laser calibration for real hardware",
+  "calibration_status": "stereo and laser simulation assumptions; separate measured RGB profile is hj90_rgb_vendor.json",
   "image_size_wh": [
     640,
     1100

@@ -1,0 +1,119 @@
+{
+  "status": "calibrated",
+  "id": "vendor-rgb-Jh26B196",
+  "optical_frame": "rgb_optical",
+  "point_frame": "vizum_camera",
+  "length_unit": "mm",
+  "resolution": [
+    3120,
+    4096
+  ],
+  "camera_matrix": [
+    [
+      3142.534912109375,
+      0.0,
+      1556.43310546875
+    ],
+    [
+      0.0,
+      3142.534912109375,
+      2117.60546875
+    ],
+    [
+      0.0,
+      0.0,
+      1.0
+    ]
+  ],
+  "distortion": [
+    0,
+    0,
+    0,
+    0,
+    0
+  ],
+  "T_optical_camera": [
+    [
+      0.9999727606773376,
+      0.0005217497819103301,
+      -0.007365590427070856,
+      -58.16891860961914
+    ],
+    [
+      -0.00048378671635873616,
+      0.9999865889549255,
+      0.005154956132173538,
+      -10.7757568359375
+    ],
+    [
+      0.007368181366473436,
+      -0.0051512522622942924,
+      0.9999595880508423,
+      -13.990567207336426
+    ],
+    [
+      0.0,
+      0.0,
+      0.0,
+      1.0
+    ]
+  ],
+  "source": "vendor SDK with physical raster projection convention check",
+  "projection_check": {
+    "samples": 21268,
+    "median_px": 1.0,
+    "p95_px": 1.4142135623730951,
+    "max_px": 2.23606797749979,
+    "sample_id": "cap_20261022T094250912601Z_61a6a732",
+    "sample_manifest_sha256": "51a61d3cab24d33fd86498ab9e472d646ef19483517337fc2575567b941f664d"
+  },
+  "vendor_raw": {
+    "source": "VZNL_GetRGBCalibParam",
+    "device_serial": "Jh26B196",
+    "resolution": [
+      3120,
+      4096
+    ],
+    "intrinsic_row_major": [
+      3142.534912109375,
+      0.0,
+      1556.43310546875,
+      0.0,
+      3142.534912109375,
+      2117.60546875,
+      0.0,
+      0.0,
+      1.0
+    ],
+    "calib_matrix_row_major": [
+      0.9999727606773376,
+      0.0005217497819103301,
+      -0.007365590427070856,
+      -58.16891860961914,
+      -0.00048378671635873616,
+      0.9999865889549255,
+      0.005154956132173538,
+      -10.7757568359375,
+      0.007368181366473436,
+      -0.0051512522622942924,
+      0.9999595880508423,
+      -13.990567207336426,
+      0.0,
+      0.0,
+      0.0,
+      1.0
+    ],
+    "map_available": true,
+    "map_sha256": "72ea9bf573db0b95647cd7b1ba338751a9b302320f84445ca9ce49fd793b181f",
+    "note": "Raw vendor calibration; validate delivered image convention and transform before use"
+  },
+  "note": "Zero distortion applies only to this rectified RGB raster; additionally check board reprojection before collecting. Projection consistency is not independent metric accuracy.",
+  "rectification": {
+    "path": "rectified-to-raw.uint16.bin",
+    "sha256": "72ea9bf573db0b95647cd7b1ba338751a9b302320f84445ca9ce49fd793b181f",
+    "layout": "x_major",
+    "mapping": "rectified_to_raw",
+    "dtype": "<u2",
+    "interpolation": "linear"
+  }
+}

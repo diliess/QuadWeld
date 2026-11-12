@@ -36,17 +36,35 @@ def child_environment():
     return environment
 
 
-def scene_setup():
+def scene_setup(rgb_profile="legacy", rgb_resolution=None):
+    """Historical benchmark callers retain legacy optics; CLI selects vendor RGB explicitly."""
     manifest = json.loads((BUNDLE / "manifest.json").read_text())
     pose = manifest["full_scene"]["poses"][POSE]
     if len(pose["arm_q_rad"]) != 6 or any(
             not math.isclose(a, b, abs_tol=1e-8) for a, b in zip(pose["arm_q_rad"], INITIAL_ARM_Q)):
         raise ValueError("A04_initial_arm must retain the normal initial joint positions")
-    asset = (BUNDLE / pose["asset"]).resolve()
+    if rgb_profile not in ("vendor", "legacy"):
+        raise ValueError("Unknown HJ-90 RGB profile")
+    vendor = None
+    if rgb_profile == "vendor":
+        from hj90.vendor_calibration import load_rgb_calibration, resize_rgb_calibration
+        vendor = resize_rgb_calibration(load_rgb_calibration(), rgb_resolution)
+        sensor = manifest["full_scene"]["active_stereo_laser"]
+        if vendor["source_sha256"] != sensor["rgb_calibration"]["source_sha256"]:
+            raise ValueError("RGB calibration changed; rebuild with scripts/build_hj90_sensor.py")
+        asset_name = manifest["full_scene"]["asset"]
+        camera = sensor["rgb_camera"]
+        resolution = vendor["image_size_wh"]
+    else:
+        asset_name = pose["asset"]
+        camera = manifest["full_scene"]["hj90_camera"]
+        resolution = list(rgb_resolution or RESOLUTION)
+    asset = (BUNDLE / asset_name).resolve()
     if not asset.is_relative_to(BUNDLE.resolve()) or not asset.is_file():
         raise FileNotFoundError(f"A04 pose asset not found in the scene bundle: {asset}")
-    return {"pose": POSE, "usd": str(asset), "camera": manifest["full_scene"]["hj90_camera"],
-            "resolution_wh": list(RESOLUTION), "base_xy_yaw": pose["base_xy_yaw"],
+    return {"pose": POSE, "usd": str(asset), "camera": camera,
+            "rgb_profile": rgb_profile, "rgb_calibration": vendor,
+            "resolution_wh": resolution, "base_xy_yaw": pose["base_xy_yaw"],
             "base_height_m": pose["base_height_m"], "arm_q_rad": pose["arm_q_rad"],
             "placement": "authored static A04 placement; normal initial arm; no aiming or walking",
             "recorded_static_checks": pose["static_checks"]}
@@ -185,13 +203,18 @@ def inspect_stage(stage, setup):
     vertical = float(camera.GetVerticalApertureAttr().Get())
     if not all(math.isfinite(v) and v > 0 for v in (focal, horizontal, vertical)):
         raise ValueError("Invalid camera focal length or aperture")
-    if camera.GetHorizontalApertureOffsetAttr().Get() or camera.GetVerticalApertureOffsetAttr().Get():
-        raise ValueError("This HJ-90 fixture expects centred pinhole optics")
+    from hj90.usd import camera_intrinsics
     width, height = setup["resolution_wh"]
     calibration = {"image_size": [width, height],
-                   "camera_matrix": [[width*focal/horizontal, 0, width/2],
-                                     [0, height*focal/vertical, height/2], [0, 0, 1]],
+                   "camera_matrix": camera_intrinsics(camera, (width, height)).tolist(),
+                   "pixel_convention": "edge origin; pixel centres at index + 0.5",
                    "distortion_coefficients": [0, 0, 0, 0, 0]}
+    if setup.get("rgb_calibration"):
+        profile = setup["rgb_calibration"]
+        if not np.allclose(calibration["camera_matrix"], profile["intrinsics"], atol=.001, rtol=0):
+            raise ValueError("USD RGB frustum disagrees with the vendor calibration")
+        calibration.update(camera_matrix_opencv=profile["intrinsics_opencv"],
+                           vendor_calibration=profile)
     world_from_camera = np.asarray(cache.GetLocalToWorldTransform(camera.GetPrim())).T @ np.diag([1., -1., -1., 1.])
     return calibration, {"arm_q_rad": actual_q, "base_position_world_m": position,
                          "world_from_camera_optical": world_from_camera.tolist()}
@@ -205,9 +228,10 @@ def capture_worker(args, setup):
     write_json(report_path, report)
     from isaacsim import SimulationApp
 
+    resolution = tuple(setup["resolution_wh"])
     app = SimulationApp({"headless": args.headless, "renderer": "RaytracedLighting",
                          "active_gpu": args.gpu, "multi_gpu": False, "open_usd": setup["usd"],
-                         "width": RESOLUTION[0], "height": RESOLUTION[1], "sync_loads": True,
+                         "width": resolution[0], "height": resolution[1], "sync_loads": True,
                          "extra_args": ["--/exts/omni.kit.async_engine/keep_loop_running=false",
                                         "--/app/window/title=QuadWeld | A04 initial arm | HJ-90"]})
     try:
@@ -222,14 +246,22 @@ def capture_worker(args, setup):
         for _ in range(60):
             app.update()
         stage = omni.usd.get_context().get_stage()
+        # RGB perception uses ambient imagery. Opening the full scene separately
+        # still previews the central laser; this session edit never writes assets.
+        stage.SetEditTarget(stage.GetSessionLayer())
+        from hj90.usd import RIG_PATH
+        laser = stage.GetPrimAtPath(RIG_PATH + "/laser")
+        if laser:
+            laser.GetAttribute("inputs:intensity").Set(0.)
+        report["laser_enabled"] = False
         calibration, pose = inspect_stage(stage, setup)
         if not args.headless:
             from omni.kit.viewport.utility import get_active_viewport
             viewport = get_active_viewport()
             if viewport:
                 viewport.camera_path = setup["camera"]
-                viewport.set_texture_resolution(tuple(RESOLUTION))
-        product = rep.create.render_product(setup["camera"], tuple(RESOLUTION))
+                viewport.set_texture_resolution(resolution)
+        product = rep.create.render_product(setup["camera"], resolution)
         rgb = rep.AnnotatorRegistry.get_annotator("rgb")
         rgb.attach(product)
         try:
@@ -238,7 +270,7 @@ def capture_worker(args, setup):
             for _ in range(5):
                 rep.orchestrator.step(rt_subframes=16, pause_timeline=True, delta_time=0.)
                 data = np.asarray(rgb.get_data()).copy()
-                if data.ndim != 3 or data.shape[:2] != (RESOLUTION[1], RESOLUTION[0]) or data.shape[2] < 3:
+                if data.ndim != 3 or data.shape[:2] != (resolution[1], resolution[0]) or data.shape[2] < 3:
                     continue
                 data = data[..., :3]
                 if not np.isfinite(data).all():
@@ -285,7 +317,9 @@ def execute(args, setup, checked):
         report["status"] = "capturing_rgb"
         write_json(report_path, report)
         command = [checked["interpreters"]["isaac"], str(Path(__file__).resolve()), "--_capture-worker",
-                   "--output-dir", str(output), "--gpu", str(args.gpu)]
+                   "--output-dir", str(output), "--gpu", str(args.gpu), "--rgb-profile", args.rgb_profile]
+        if args.rgb_resolution:
+            command += ["--rgb-resolution", *map(str, args.rgb_resolution)]
         if args.headless:
             command.append("--headless")
         run_process(command, output / "capture.log")
@@ -340,12 +374,18 @@ def parse_args(argv=None):
     parser.add_argument("--capture-only", action="store_true", help="Capture RGB without running recognition")
     parser.add_argument("--sensor", choices=("rgb", "hj90"), default="rgb",
                         help="rgb: existing DA3/SAM workflow; hj90: active stereo/laser scan and metric point cloud")
+    parser.add_argument("--rgb-profile", choices=("vendor", "legacy"), default="vendor",
+                        help="vendor: measured rectified RGB K/T; legacy: original simulated midpoint camera")
+    parser.add_argument("--rgb-resolution", type=int, nargs=2, metavar=("WIDTH", "HEIGHT"),
+                        help="Resize the full RGB raster and K; default is vendor native 3120 x 4096")
     parser.add_argument("--scan-lines", type=int, default=640, help="HJ-90 static laser scan samples")
     parser.add_argument("--check", action="store_true", help="Check environments/assets/GPU without launching Isaac")
     parser.add_argument("--_capture-worker", action="store_true", help=argparse.SUPPRESS)
     args = parser.parse_args(argv)
     if args.gpu < 0 or args.scan_lines < 1 or not 0 < args.semantic_threshold <= 1:
         parser.error("Use --gpu >= 0 and 0 < --semantic-threshold <= 1")
+    if args.rgb_resolution and min(args.rgb_resolution) < 1:
+        parser.error("RGB width and height must be positive")
     stamp = datetime.now(ZoneInfo("Asia/Taipei")).strftime("%Y%m%d_%H%M%S_%f")
     args.output_dir = (args.output_dir or ROOT / "outputs/runs" / f"a04_{stamp}").expanduser().resolve()
     if args.model_cache_dir:
@@ -355,7 +395,7 @@ def parse_args(argv=None):
 
 def main(argv=None):
     args = parse_args(argv)
-    setup = scene_setup()
+    setup = scene_setup(args.rgb_profile if args.sensor == "rgb" else "legacy", args.rgb_resolution)
     if args._capture_worker:
         return capture_worker(args, setup)
     checked = preflight(args, setup)

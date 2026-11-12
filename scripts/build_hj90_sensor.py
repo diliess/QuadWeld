@@ -21,7 +21,8 @@ def build():
     names = sorted({f['path'] for f in manifest['files']} | set(info['extra_files']))
     manifest['files'] = [{'path':n, 'bytes':(bundle/n).stat().st_size,
                           'sha256':hashlib.sha256((bundle/n).read_bytes()).hexdigest()} for n in names]
-    manifest['sensor_scope'] = 'two independent pinhole cameras and RTX line projector; RGB-only scan reconstruction; unmeasured calibration assumptions'
+    manifest['sensor_scope'] = ('90 mm simulated stereo and central RTX laser; separate vendor-calibrated rectified RGB; '
+                                'stereo intrinsics and laser calibration remain simulation assumptions')
     (bundle/'manifest.json').write_text(json.dumps(manifest, ensure_ascii=False, indent=2)+'\n')
     print('HJ90_SENSOR_LAYER', bundle/info['layer'])
 

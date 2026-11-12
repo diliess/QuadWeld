@@ -136,7 +136,96 @@
         "right": "/World/Robot/e05l_welding_torch/hj90_active/right"
       },
       "laser": "/World/Robot/e05l_welding_torch/hj90_active/laser",
-      "calibration": "source/hj90_sim_calibration.json"
+      "calibration": "source/hj90_sim_calibration.json",
+      "rgb_camera": "/World/Robot/e05l_welding_torch/hj90_active/rgb",
+      "rgb_calibration": {
+        "file": "source/hj90_rgb_vendor.json",
+        "id": "vendor-rgb-Jh26B196",
+        "device_serial": "Jh26B196",
+        "image_size_wh": [
+          3120,
+          4096
+        ],
+        "native_image_size_wh": [
+          3120,
+          4096
+        ],
+        "intrinsics_opencv": [
+          [
+            3142.534912109375,
+            0.0,
+            1556.43310546875
+          ],
+          [
+            0.0,
+            3142.534912109375,
+            2117.60546875
+          ],
+          [
+            0.0,
+            0.0,
+            1.0
+          ]
+        ],
+        "intrinsics": [
+          [
+            3142.534912109375,
+            0.0,
+            1556.93310546875
+          ],
+          [
+            0.0,
+            3142.534912109375,
+            2118.10546875
+          ],
+          [
+            0.0,
+            0.0,
+            1.0
+          ]
+        ],
+        "distortion_coefficients": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "T_rgb_from_left_m": [
+          [
+            0.9999727606773376,
+            0.0005217497819103301,
+            -0.007365590427070856,
+            -0.05816891860961914
+          ],
+          [
+            -0.00048378671635873616,
+            0.9999865889549255,
+            0.005154956132173538,
+            -0.0107757568359375
+          ],
+          [
+            0.007368181366473436,
+            -0.0051512522622942924,
+            0.9999595880508423,
+            -0.013990567207336426
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            1.0
+          ]
+        ],
+        "source_file": "hj90_rgb_vendor.json",
+        "source_sha256": "28423b34f9ab8cf2bc036e4f70e359ef0e51d4fb44e3a0d1e11a486da7348ea5",
+        "sdk_api": "VZNL_GetRGBCalibParam",
+        "vendor_pixel_convention": "OpenCV integer pixel centres; board reprojection still required",
+        "pixel_convention": "edge origin; pixel centres at index + 0.5",
+        "rectification_map_supplied": false,
+        "scope": "rectified RGB calibration for serial Jh26B196; not a stereo or laser calibration",
+        "device_model_binding": "applied from supplied materials; serial-to-HJ90 model identity not independently verified"
+      }
     }
   },
   "hj90_camera": {
@@ -280,8 +369,8 @@
     },
     {
       "path": "industrial_welding_hj90.usda",
-      "bytes": 3535,
-      "sha256": "cf22108ec4f6e4cd04704c90a3cb4bbe6f170e588e03ec54452a02ce95ca38c3"
+      "bytes": 6091,
+      "sha256": "1d1992b15ff9f2d19c545e9af19cb166c0ecb738de058a230cd8dce741202890"
     },
     {
       "path": "licenses/RoboSimStudio.LICENSE",
@@ -314,9 +403,14 @@
       "sha256": "405f2f3e5c16d816c86112ffda8f853d6d682aa7370fa5f636eb5b8fddb27100"
     },
     {
+      "path": "source/hj90_rgb_vendor.json",
+      "bytes": 2799,
+      "sha256": "28423b34f9ab8cf2bc036e4f70e359ef0e51d4fb44e3a0d1e11a486da7348ea5"
+    },
+    {
       "path": "source/hj90_sim_calibration.json",
-      "bytes": 1377,
-      "sha256": "29057a36fa8b3bb88fab77d3b3160c36b7b1dd7f8570622a430ec09a7772c0d6"
+      "bytes": 1383,
+      "sha256": "5dca79893fde0c762c97320866d9996c395d3f04eba44264e38a0017642eb7dd"
     },
     {
       "path": "source/usd_manifest.json",
@@ -344,5 +438,5 @@
       "sha256": "d78c6b7255b1742dd1f45101975f36520f96d579a1a69d5ac97e5f4edd8cf134"
     }
   ],
-  "sensor_scope": "two independent pinhole cameras and RTX line projector; RGB-only scan reconstruction; unmeasured calibration assumptions"
+  "sensor_scope": "90 mm simulated stereo and central RTX laser; separate vendor-calibrated rectified RGB; stereo intrinsics and laser calibration remain simulation assumptions"
 }

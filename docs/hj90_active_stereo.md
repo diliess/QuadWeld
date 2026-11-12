@@ -2,7 +2,9 @@
 
 2026-11-09：QuadWeld 新增两路独立相机、中央线激光投射、摆动扫描、RGB 条纹检测和双目三角测量。按用户确认采用仿真标定参数，配置为 `calibration/hj90_sim.json`。原 DA3/SAM 单张 RGB 工作流继续保留；本入口不调用 DA3，也不以 RTX 深度作为传感器输出。
 
-这是对文档所述**测量链路的功能复现**。缺少厂家内外参、光功率、曝光响应和扫描机构标定，不能称为与实机完全等价，不能宣称达到宣传册的 0.03 mm 重复精度或测量精度。
+2026-11-12：按新提供的厂商资料接入独立 RGB 通道，采用 `calibration/hj90_rgb_vendor.json` 的已校正 RGB 内参和左目到 RGB 的外参。该记录不提供双目左右目内参或激光标定；本页扫描链路仍使用原有仿真双目参数。原生 RGB 分辨率、坐标及使用方式见 [资料对齐说明](hj90_material_alignment.md)。
+
+这是对文档所述**测量链路的功能复现**。缺少厂家左右目内外参、激光参数、光功率、曝光响应和扫描机构标定，不能称为与实机完全等价，不能宣称达到宣传册的 0.03 mm 重复精度或测量精度。
 
 ## 已实现的链路
 
@@ -52,8 +54,9 @@
 - 左目 `/World/Robot/e05l_welding_torch/hj90_active/left`
 - 右目 `/World/Robot/e05l_welding_torch/hj90_active/right`
 - 激光 `/World/Robot/e05l_welding_torch/hj90_active/laser`
+- 厂商已校正 RGB `/World/Robot/e05l_welding_torch/hj90_active/rgb`
 
-原 `/.../hj90` 留作中点 RGB 兼容相机。打开 USD 可看到零角度的投射，自动摆扫由 `scan_hj90.py` 驱动；不会仅凭打开文件自动执行机器人动作。所有原始 USDC、拍摄层和机器人初始位姿保持不变。更新仿真标定后运行 `scripts/build_hj90_sensor.py` 重建便携传感器层；导入脚本也会重建它。
+原 `/.../hj90` 留作中点 RGB 兼容相机。`main.py` 默认改用厂商 RGB 通道，拍照时在会话层关闭激光。打开 USD 可看到零角度的投射，自动摆扫由 `scan_hj90.py` 驱动；不会仅凭打开文件自动执行机器人动作。所有原始 USDC、拍摄层和机器人初始位姿保持不变。更新仿真或 RGB 标定后运行 `scripts/build_hj90_sensor.py` 重建便携传感器层；导入脚本也会重建它。
 
 投影使用 [NVIDIA 的 RTX projector light 接口](https://docs.omniverse.nvidia.com/materials-and-rendering/latest/lighting.html#projector-light)。采样前重置渲染历史，避免把上一条光纹拖影当作新条纹；参考 [Isaac Sim SDG 渲染历史说明](https://docs.isaacsim.omniverse.nvidia.com/6.1.0/replicator_tutorials/tutorial_replicator_sdg_workflows.html)。
 

@@ -17,9 +17,12 @@ RGB → DA3 深度与内参 → SAM3 板件/焊道分割 → 板面拟合
 HJ-90 保持焊枪上的固定安装，使用该臂姿下的自然视野，不做朝向目标的 IK 调整。
 此流程是静态摆位拍照，不执行机器狗行走或机械臂运动轨迹。
 
-依次执行：加载场景 → 拍摄一张 640×1100 RGB → 退出 Isaac 进程释放显存 →
+依次执行：加载场景 → 用厂商标定 RGB 通道拍摄一张 3120×4096 图像 → 退出 Isaac 进程释放显存 →
 DA3 预测深度 → SAM3 分割和几何识别。相机内参从当前 USD 相机读取，传给识别流程；
 不采集或使用渲染器深度，也不把场景中的焊缝位置传给识别算法。
+RGB 内参、偏心主点和左目到 RGB 的外参来自用户提供的 `Jh26B196` 标定；
+这是独立 RGB 通道，左右目和激光标定仍为仿真假设。参数来源、坐标约定与设计范围见
+[相机资料对齐说明](docs/hj90_material_alignment.md)。
 
 准备已有的 Isaac Sim Python 3.12 环境，以及下文的 DA3、SAM3 环境，然后执行：
 
@@ -41,6 +44,12 @@ DA3 预测深度 → SAM3 分割和几何识别。相机内参从当前 USD 相�
 
 # 仅查看初始臂姿下相机实际拍到的 RGB
 .venv/bin/python main.py --headless --capture-only
+
+# 同一 RGB 视场按 1/4 边长采样，内参同步缩放
+.venv/bin/python main.py --headless --capture-only --rgb-resolution 780 1024
+
+# 复现旧的 640×1100 仿真中点相机
+.venv/bin/python main.py --headless --capture-only --rgb-profile legacy
 ```
 
 | 参数 | 用途 |
@@ -50,6 +59,8 @@ DA3 预测深度 → SAM3 分割和几何识别。相机内参从当前 USD 相�
 | `--isaac-python`、`--da3-python`、`--sam-python` | 三个运行环境的 Python 路径 |
 | `--model-cache-dir` | 可选的 DA3/SAM 模型输出缓存目录 |
 | `--semantic-threshold` | SAM 初始阈值，默认 `0.25` |
+| `--rgb-profile` | 默认 `vendor` 使用已校正 RGB 标定；`legacy` 使用原仿真中点相机 |
+| `--rgb-resolution WIDTH HEIGHT` | 整幅 RGB 图像降采样，内参与主点同步缩放；默认厂商原生分辨率 |
 
 默认输出为 `outputs/runs/a04_<时间戳>/`：
 
