@@ -1,11 +1,11 @@
 # 双目平面交线焊缝定位
 
 2026-11-11。适用对象：两块平板相交形成的直焊缝（T 接头、角接头），输入为一组同步、已标定的双目 RGB。
-代码在 `vision/stereo_seam.py`，单组入口 `scripts/stereo_seam.py`，批量评价 `scripts/benchmark_stereo_plane_seams.py`。
+代码在 `weld_vision/stereo_seam.py`，单组入口 `weld_vision/stereo_io.py`，批量评价 `tests/benchmarks/benchmark_stereo_plane_seams.py`。
 
 ## 为什么不直接用深度图
 
-此前流程（[说明](nested_seam_localization.md)）用 DA3 Nested 深度按基线定尺度，再拟合板面求交线。
+已移除的历史流程（[实验记录](../outputs/archive/non_stereo_experiments_20261117/docs/nested_seam_localization.md)）用 DA3 Nested 深度按基线定尺度，再拟合板面求交线。
 同一批数据上，整体距离的平均误差为 14.5–58.7 mm，近距离为 8.8–33.1 mm，且多数视图要靠几何回退才有输出。
 误差主要来自深度模型的米制尺度和板面倾角，而这两项恰好是标定双目可以直接测量的量。
 
@@ -22,16 +22,21 @@ d(u, v) = a·u + b·v + c
 
 ## 流程
 
-1. **板件掩码**。SAM3 给出两块板在左图上的粗掩码，沿用[前景板件提示](foreground_plate_parts.md)的做法
-   （DA3 深度只用于自动放置 SAM 提示点）。掩码不需要贴边，下面的扰动测试给出容忍范围。
+1. **板件掩码**。当前使用 SAM3.1 文本提示生成候选，再选出相邻的两块板，见 [焊趾线说明](bead_toe_seam.md)。
+   本页历史评测使用此前缓存的掩码，其提示点来源见 [历史前景板件实验](../outputs/archive/non_stereo_experiments_20261117/docs/foreground_plate_parts.md)。掩码不需要贴边，下面的扰动测试给出容忍范围。
 2. **取接缝邻域**。每块板只用靠近另一块板的那一带像素（默认取较小板的尺度）。
    分割远离接缝处容易漏到工作台、夹具上，而焊缝只由接缝附近的板面决定。
 3. **视差平面拟合**（每块板独立）。图像做局部对比度归一化（对左右目曝光、增益差不敏感）；
    先在最粗尺度对视差范围和倾斜做穷举相关搜索，取前几个假设，再由粗到细（模糊 6 / 3 / 1.5 / 0.75 px）
    做 Tukey 加权的 Gauss-Newton 细化；最后按“解释不了的像素比例 + 残差尺度”选假设。
    掩码向外扩 2 px 左右，让板的轮廓参与对齐——钢板内部纹理弱，轮廓是最强的约束。
-   可选地把 DA3 深度拟合成初值加入候选，它与全局搜索的结果同台比较，初值错了也不会带偏。
    长边超过 1600 px 的图像先在半分辨率上搜索，再回到原分辨率细化。
+   周期纹理（拉丝、花纹板、鱼鳞焊纹）会让差一个纹理周期的视差平面同样对得上。为此每块板保留多个假设：
+   多个尺度的搜索结果、最优假设的周期别名，以及“折页假设”——把相邻板的平面绕接缝附近的一条线折过来
+   （扫描折线角度、位置和折角），用来补上被反光或遮挡边带偏时搜不到的真平面。
+   两块板的假设成对比较，优先选在接缝处相接的一对；若存在深度明显不同、代价却相近的另一对，
+   `depth_ambiguity` 接近 1，超过 `max_ambiguity`（默认 0.85）时拒绝输出而不是猜一个。
+   已知接缝大致距离时（例如其他视角合并出的焊缝），用 `expected_distance` 在相近代价的假设中挑选。
 4. **交线与范围**。两平面求交得到无限长直线；有限范围取两块板掩码凸包在该直线两侧的公共区间
    （凸包用于补上分割常漏掉的阴影带）。落在图像边缘的端点标记为 `end_is_open`：那是视野的尽头，不是接头的尽头。
 5. **焊枪方向**。两块板朝向相机一侧法向的角平分线，并与焊缝方向正交（`torch_axis`，由焊缝指向外）。
@@ -45,29 +50,32 @@ d(u, v) = a·u + b·v + c
 - `split_half_spread_mm`：把每块板的像素按棋盘格分成两半各自重拟合，焊缝位置的变化量。
   它反映数据对平面的约束强弱，看不到两半共有的系统误差（标定偏差、位姿误差）。
 - `plate_inlier_fraction`、`plate_residual`：对齐后残差小的像素比例与残差尺度。掩码严重混入别的表面时前者下降。
+- `depth_ambiguity`：最优的一对平面与深度不同的次优一对的代价比，0 表示没有竞争者，接近 1 表示两种深度分不开；
+  `depth_resolved_by_prior` 表示结果是靠 `expected_distance` 选出的。
 - `depth_per_disparity_px_mm`：当前距离下一个视差像素对应的深度（`Z² / (f·B)`），用于判断该距离是否够用。
 
 `status` 不为 `ok` 时不输出焊缝：`plate_mask_too_small`、`plates_are_not_adjacent`（两掩码相距过远）、
-`plates_nearly_parallel`（夹角小于 15°，交线病态）、`plates_do_not_meet_at_intersection`、`seam_shorter_than_end_margins`。
+`plates_nearly_parallel`（夹角小于 15°，交线病态）、`plates_do_not_meet_at_intersection`、`seam_shorter_than_end_margins`、
+`ambiguous_stereo_match`（周期纹理导致深度有多解且没有先验，见上）、`no_stereo_match_in_depth_range`（给定深度范围内对不上）。
 
 ## 用法
 
 ```bash
 # 单组双目：quadweld-stereo-v1 的 input.json + 左图上的两块板掩码
-.venv/bin/python scripts/stereo_seam.py \
-  outputs/benchmarks/t_station_full_joint_20261110_01/captures/A21_full_center/input.json \
-  --masks outputs/benchmarks/t_station_full_joint_20261110_01/plate_parts/A21_full_center_left/masks.npz \
+.venv/bin/python -m weld_vision.stereo_io \
+  outputs/archive/non_stereo_experiments_20261117/outputs/benchmarks/t_station_full_joint_20261110_01/captures/A21_full_center/input.json \
+  --masks outputs/archive/non_stereo_experiments_20261117/outputs/benchmarks/t_station_full_joint_20261110_01/plate_parts/A21_full_center_left/masks.npz \
   --output-dir outputs/stereo_seam_demo/A21_full_center
 ```
 
 输出 `seam.json`（平面、端点、方向、焊枪轴、检查量）、`seam_path.csv`（默认每 2 mm 一个路点，左相机光学坐标系，米）和 `overlay.png`。
-`--end-margin` 设置起弧/收弧内缩量，`--init-depth` 传入 DA3 深度作初值。
+`--end-margin` 设置起弧/收弧内缩量，`--expected-distance` 可传入其他双目视角测得的大致接缝距离。
 `input.json` 未声明已校正时，脚本按其中的内参、畸变和外参先做校正（`rectify_pair`），结果转回原左相机坐标系。
 
 在代码中调用：
 
 ```python
-from vision import stereo_seam as ss
+from weld_vision import stereo_seam as ss
 result = ss.locate_seam(left_rgb, right_rgb, K, baseline_m, mask_base, mask_web)
 if result['status'] == 'ok':
     path = result['xyz']            # N×3，左相机坐标系，米
@@ -81,13 +89,13 @@ if result['status'] == 'ok':
 预测阶段只读左右目图像、标定、掩码和规划的机械臂位姿；USD 名义焊缝与 CAD 只在评价阶段打开。
 
 ```bash
-.venv/bin/python scripts/benchmark_stereo_plane_seams.py \
-  --run-dir outputs/benchmarks/t_station_full_joint_20261110_01 \
-  --output-dir outputs/benchmarks/stereo_plane_full_20261111_01
-.venv/bin/python scripts/benchmark_stereo_plane_seams.py \
-  --run-dir outputs/benchmarks/t_station_close_20261110_01 \
-  --masks-dir outputs/benchmarks/foreground_plate_parts_20261110_01 \
-  --output-dir outputs/benchmarks/stereo_plane_close_20261111_01
+.venv/bin/python -m tests.benchmarks.benchmark_stereo_plane_seams \
+  --run-dir outputs/archive/non_stereo_experiments_20261117/outputs/benchmarks/t_station_full_joint_20261110_01 \
+  --output-dir outputs/benchmarks/20261111_01__stereo__multi3__root_full
+.venv/bin/python -m tests.benchmarks.benchmark_stereo_plane_seams \
+  --run-dir outputs/archive/non_stereo_experiments_20261117/outputs/benchmarks/t_station_close_20261110_01 \
+  --masks-dir outputs/archive/non_stereo_experiments_20261117/outputs/benchmarks/foreground_plate_parts_20261110_01 \
+  --output-dir outputs/benchmarks/20261111_01__stereo__multi3__root_close
 ```
 
 线误差指画内名义焊缝采样点到预测三维直线的距离。
@@ -98,16 +106,18 @@ if result['status'] == 'ok':
 | 近距离 | 0.65 m | 约 6 mm | 9 / 9 | 0.62 mm（0.12–1.17） | 2.2 mm | 100% | 0.41 / 0.55 / 0.43 mm | 1.9 s |
 
 整体距离下预测端点与 CAD 接触线端点相差 0.8–14.4 mm（合并后 1.8–4.2 mm）；近距离单视图看不全接头，合并后为 1.1–3.8 mm。
-耗时为单线程 CPU，不含 SAM3。逐视图表格与叠加图见
-[整体距离报告](../outputs/benchmarks/stereo_plane_full_20261111_01/README.md)、
-[近距离报告](../outputs/benchmarks/stereo_plane_close_20261111_01/README.md)。
+耗时为单线程 CPU，不含 SAM3，是 11 月 11 日版本的数值。11 月 13 日加入多假设与折页假设后，
+同样 18 组输入的输出与原结果一致（线位置差小于 1e-9 m），耗时变为整体距离约 2.2 s、近距离约 5.1 s，
+`depth_ambiguity` 最大 0.73。逐视图表格与叠加图见
+[整体距离报告](../outputs/benchmarks/20261111_01__stereo__multi3__root_full/README.md)、
+[近距离报告](../outputs/benchmarks/20261111_01__stereo__multi3__root_close/README.md)。
 
 输入扰动（各视图线误差均值的平均 / 最差视图，mm；全部 9 / 9 有输出）：
 
 | 条件 | 整体距离 | 近距离 |
 |---|---:|---:|
 | 原始输入 | 3.48 / 6.03 | 0.62 / 1.17 |
-| 用 DA3 深度作初值 | 3.48 / 6.03 | 0.62 / 1.17 |
+| 历史 DA3 初值对照（入口已移除） | 3.48 / 6.03 | 0.62 / 1.17 |
 | 右目变暗（增益 0.7，gamma 1.3） | 4.05 / 6.71 | 0.72 / 1.07 |
 | 左右目加噪声（sigma 3/255） | 5.76 / 18.61 | 1.83 / 3.63 |
 | 掩码腐蚀 5 px | 6.12 / 10.36 | 0.57 / 0.80 |
@@ -116,7 +126,7 @@ if result['status'] == 'ok':
 | 左右目模糊（sigma 1.5 px） | 4.94 / 10.32 | 0.95 / 1.77 |
 | 右目竖直错位 0.5 px（校正残差） | 6.26 / 10.43 | 0.77 / 1.29 |
 
-DA3 初值与全局搜索收敛到同一结果，所以这批数据上 DA3 对定位没有贡献，只在生成 SAM 提示时用到。
+历史 DA3 初值对照与全局搜索收敛到同一结果，该对照入口现已移除；当前运行仅使用双目测量。
 
 ## 建议的现场用法
 
@@ -134,6 +144,9 @@ DA3 初值与全局搜索收敛到同一结果，所以这批数据上 DA3 对�
 - 掩码为此前缓存的 SAM3 结果，本次没有重跑 SAM3/DA3。两块板的掩码若选错了物体，本方法只能通过
   `status` 和内点比例部分发现。
 - 只处理两块平板之间的直焊缝；曲面件、曲线焊缝、坡口内部形状不在范围内。
+  接头上已有焊道、需要焊道两侧焊趾线时见 [焊道焊趾线说明](bead_toe_seam.md)。
+- 基线与纹理条纹方向垂直、且纹理只有一个方向时（纯条纹），不同深度的平面无法由单组双目区分；
+  多数情况会报 `ambiguous_stereo_match`，但在合成的纯条纹测试里出现过自信的错误结果，应转动相机或换视角。
 - 沿焊缝方向的端点取自掩码轮廓，精度受分割限制，明显低于线位置精度。
 - 噪声较大时远距离个别视图退化明显（上表 18.6 mm）；板面完全无纹理且轮廓不可见时平面无法确定。
 - 试过但未采用：用二维边缘把交线吸附到图像中的接缝、两板共享焊缝的联合重拟合，在这批数据上收益不稳定。

@@ -4,9 +4,9 @@ import unittest
 import numpy as np
 from pxr import Usd,UsdGeom,UsdPhysics
 
-from hj90.arm_kinematics import ArmKinematics
-from hj90.mount_offset import TOOL,apply_usd_offset,torch_frustum_audit
-from hj90.optics import load_calibration
+from weld_scene.arm_kinematics import ArmKinematics
+from weld_scene.mount_offset import TOOL,apply_usd_offset,torch_frustum_audit
+from weld_scene.optics import load_calibration
 
 
 class MountOffsetTests(unittest.TestCase):

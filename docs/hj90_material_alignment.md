@@ -60,25 +60,19 @@ JSON 的零畸变只适用于它描述的**已校正 RGB 图像**。它引用的
 
 ```bash
 # 重建包含 RGB / 双目 / 激光的便携覆盖层与哈希清单
-.venv/bin/python scripts/build_hj90_sensor.py
+.venv/bin/python -m weld_scene.build_sensor
 
-# 默认使用厂商 RGB 通道；原生 3120×4096
-.venv/bin/python main.py --headless --capture-only
+# 当前双目焊缝扫查（左右目使用独立仿真标定）
+.venv/bin/python main.py --station A25 --headless
 
-# 相同完整视场，按 1/4 边长采样并同步缩放内参
-.venv/bin/python main.py --headless --capture-only --rgb-resolution 780 1024
-
-# 复现旧的 640×1100 中点视角
-.venv/bin/python main.py --headless --capture-only --rgb-profile legacy
-
-# 双目激光重建使用独立仿真双目标定
-.venv/bin/python main.py --sensor hj90 --headless
+# 独立的双目激光仿真工具
+.venv/bin/python -m weld_scene.active_scan --pose original --headless
 ```
 
-拍 RGB 时只在会话层关闭激光，不改保存的场景。`camera.json` 包含实际 USD 内参、OpenCV 内参、标定来源及分辨率；`capture.json` 保存相机路径、实际位姿与图像哈希。旧双目采集和历史 benchmark 保留原有参数，其误差结果没有冒充为本次 RGB 标定下重新测试的结果。
+原单张 RGB 拍照入口已移除。下文拍照记录和输出字段属于历史验证；厂商 RGB 标定与便携 USD 相机仍保留。当前双目采集的 `input.json` 保存左右目内外参，其标定独立于厂商 RGB 通道。
 
 ## 验证
 
 57 项 CPU 测试通过；其中新增 7 项检查 RGB 标定值、单位和坐标方向、缩放主点、非法输入拒绝、USD 投影、随臂运动与拍照入口。便携 USD 的全部依赖与文件哈希检查通过。
 
-Isaac Sim 6.0.0.1 实际完成 `780×1024` 和原生 `3120×4096` 两次 RGB 拍照，输出分别在 `outputs/validation/hj90_vendor_rgb_20261112_01/` 与 `outputs/validation/hj90_vendor_rgb_20261112_02_native/`。两次均成功获得非恒定图像，激光关闭，未执行物理运动；本次未重跑 DA3/SAM3 或进行速度基准评价。该检查确认参数配置和渲染链路有效，不代表硬件计量精度认证。
+Isaac Sim 6.0.0.1 实际完成 `780×1024` 和原生 `3120×4096` 两次 RGB 拍照，输出分别在 `outputs/validation/20261112_01__rgb_calibration__HJ90__vendor_capture/` 与 `outputs/validation/20261112_02__rgb_calibration__HJ90__native_capture/`。两次均成功获得非恒定图像，激光关闭，未执行物理运动；本次未重跑 DA3/SAM3 或进行速度基准评价。该检查确认参数配置和渲染链路有效，不代表硬件计量精度认证。

@@ -4,7 +4,7 @@ import unittest
 
 import numpy as np
 
-from hj90.optics import load_calibration, reconstruct, stripe_centres, triangulate, rasterize
+from weld_scene.optics import load_calibration, reconstruct, stripe_centres, triangulate, rasterize
 
 
 class StereoTests(unittest.TestCase):
@@ -67,7 +67,7 @@ class USDOpticsTests(unittest.TestCase):
         from pathlib import Path
         import tempfile
         from pxr import Gf, Usd, UsdGeom
-        from hj90.usd import attach, laser_texture, SOURCE_CAMERA
+        from weld_scene.usd import attach, laser_texture, SOURCE_CAMERA
         c=load_calibration()
         with tempfile.TemporaryDirectory() as directory:
             stage=Usd.Stage.CreateInMemory()
@@ -105,13 +105,15 @@ class USDOpticsTests(unittest.TestCase):
 class AcquisitionTests(unittest.TestCase):
     def test_line_rate_and_full_frame_timing_limits(self):
         import contextlib,io
-        from scripts.scan_hj90 import parse_args
+        from weld_scene.active_scan import parse_args
         for args in (['--lines','0'],['--lines','3000','--duration','.4'],['--duration','.01'],
                      ['--mode','dynamic','--angle-deg','90'],['--target-speed','1']):
             with contextlib.redirect_stderr(io.StringIO()),self.assertRaises(SystemExit):
                 parse_args(args)
         args,c=parse_args(['--mode','dynamic','--lines','50','--duration','.01'])
         self.assertEqual(args.lines/args.duration,5000)
+        self.assertEqual(args.output_dir.parent.name, 'validation')
+        self.assertRegex(args.output_dir.name, r'^\d{8}_\d{6}_\d{6}__active_stereo__original__dynamic_scan$')
 
 
 if __name__=='__main__':

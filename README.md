@@ -1,290 +1,125 @@
 # QuadWeld
 
-从完整 RGB 图片自动提取三维接缝和已有焊道两侧的焊趾曲线。
-[`main.py`](main.py) 集成当前场景加载、HJ-90 拍照及自动识别；
-[`scripts/auto_weld.py`](scripts/auto_weld.py) 也可独立处理 RGB 图片。
-无需输入深度、人工选区、点提示或焊接状态。
+从标定双目图像提取焊缝根线和已有焊道两侧的三维焊趾。`main.py` 只运行双目扫查，默认工位 A25，也支持 A26。
 
-```text
-RGB → DA3 深度与内参 → SAM3 板件/焊道分割 → 板面拟合
-    → 接缝交线 / 成对焊趾 → 几何有效性与连续区间 → 结果导出
-```
+## 双目扫查
 
-## 场景拍照与识别
+1. 末端双目相机在约 2 m 处拍摄全接头。
+2. SAM3.1 使用文本提示生成板件候选掩码，双目视差平面拟合确定根线位置和距离。
+3. 根据整体测量结果规划约 0.60 m 工作距离的重叠近拍位姿。
+4. 逐视角采集、分割并测量根线和两侧焊趾。
+5. 使用相机外参进行多视角融合，输出世界坐标折线。
 
-`main.py` 加载导入清单中的默认姿态。当前已同步 RoboSimStudio `a14ad12`：32×40 m、28 个 A 工位，A25–A28 带首层焊道和焊纹。默认采用源场景正常初始站姿，基座约 `[-14,0,0.522968]` m，机械臂 `[0,1.2,2.3,0,1.3,0]` rad。
-HJ-90 保持焊枪上的固定安装；初始视线未对准工件，适合检查加载和采集。焊缝识别测试需先为新工位规划视角。旧 A02/A04 拍摄预设已备份并退出当前场景，既有报告和误差属于旧布局。
-此流程不执行机器狗行走或机械臂运动轨迹。
+米制尺度来自双目标定；识别阶段使用 RGB、标定、SAM 候选和相机位姿。渲染深度与场景焊缝网格只供独立评价。
 
-依次执行：加载场景 → 用厂商标定 RGB 通道拍摄一张 3120×4096 图像 → 退出 Isaac 进程释放显存 →
-DA3 预测深度 → SAM3 分割和几何识别。相机内参从当前 USD 相机读取，传给识别流程；
-不采集或使用渲染器深度，也不把场景中的焊缝位置传给识别算法。
-RGB 内参、偏心主点和左目到 RGB 的外参来自用户提供的 `Jh26B196` 标定；
-这是独立 RGB 通道，左右目和激光标定仍为仿真假设。参数来源、坐标约定与设计范围见
-[相机资料对齐说明](docs/hj90_material_alignment.md)。
-
-准备已有的 Isaac Sim Python 3.12 环境，以及下文的 DA3、SAM3 环境，然后执行：
+定位算法已拆为两个可独立调用的 Python 功能包：`weld_vision.coarse_localization` 负责远距离粗定位，
+`weld_vision.multiview_localization` 负责近距离逐视角测量和融合。输入输出与调用方式见
+[两阶段定位功能包](docs/localization_packages.md)。
 
 ```bash
-.venv/bin/python main.py --headless \
-  --da3-python /path/to/envs/depth-anything-3/bin/python \
-  --sam-python /path/to/envs/sam3/bin/python
+# A25 在线采集与识别
+.venv/bin/python main.py --station A25 --headless
+
+# 只检查 A26 所需环境和模型
+.venv/bin/python main.py --station A26 --check
+
+# 用已保存的图像、标定和 SAM 掩码复跑，无需 GPU 或模型环境
+.venv/bin/python main.py --station A26 --replay outputs/benchmarks/20261116_02__stereo__A25-A26_front__sweep
 ```
 
-默认 Isaac Python 为项目 `.venv/bin/python`；其他安装可通过 `--isaac-python` 指定。
-可设置 `QUADWELD_ISAAC_PYTHON`、`QUADWELD_DA3_PYTHON`、`QUADWELD_SAM_PYTHON`，
-以后直接运行 `python main.py --headless`。脚本也会尝试当前解释器、本地 `.venv-da3`、
-`.venv-sam` 以及常见 Conda 环境目录。
-不加 `--headless` 时，拍照阶段显示 HJ-90 视角；拍照结束后窗口关闭，随后执行模型推理。
+在线采集使用 Isaac Sim 和独立的 SAM3 Python 3.12 环境。位姿规划还需要 MuJoCo、USD Python 绑定和碰撞模型，
+默认使用相邻 `robosimstudio` 仓库中的工业焊接场景。采集按离散位姿停拍，并检查位姿间的静态插值点；
+该检查不运行机身行走、关节跟踪或振动的动力学。
 
-```bash
-# 只检查环境、模型文件和 GPU，不启动 Isaac
-.venv/bin/python main.py --check
+SAM3.1 的源码、权重和环境准备见 [模型部署说明](thirdparty/README.md)。
+基础 `pyproject.toml` 定义 CPU 后处理依赖；Isaac Sim 与 SAM3 分别使用已有的独立运行环境。
+默认优先查找项目 `.venv/bin/python` 作为 Isaac Python，SAM 可使用 `.venv-sam/bin/python` 或 Conda `sam3` 环境。
+也可通过 `QUADWELD_ISAAC_PYTHON`、`QUADWELD_SAM_PYTHON` 或对应命令行参数指定解释器。
 
-# 仅查看初始臂姿下相机实际拍到的 RGB
-.venv/bin/python main.py --headless --capture-only
-
-# 同一 RGB 视场按 1/4 边长采样，内参同步缩放
-.venv/bin/python main.py --headless --capture-only --rgb-resolution 780 1024
-
-# 复现旧的 640×1100 仿真中点相机
-.venv/bin/python main.py --headless --capture-only --rgb-profile legacy
-```
+## 参数
 
 | 参数 | 用途 |
 | --- | --- |
-| `--gpu` | 物理 GPU 编号，默认 0 |
-| `--output-dir` | 本次运行目录，要求为空；默认自动生成带台北时间戳的目录 |
-| `--isaac-python`、`--da3-python`、`--sam-python` | 三个运行环境的 Python 路径 |
-| `--model-cache-dir` | 可选的 DA3/SAM 模型输出缓存目录 |
-| `--semantic-threshold` | SAM 初始阈值，默认 `0.25` |
-| `--rgb-profile` | 默认 `vendor` 使用已校正 RGB 标定；`legacy` 使用原仿真中点相机 |
-| `--rgb-resolution WIDTH HEIGHT` | 整幅 RGB 图像降采样，内参与主点同步缩放；默认厂商原生分辨率 |
+| `--station A25/A26` | 选择工位，默认 A25 |
+| `--replay PATH` | 读取保存的双目采集数据与 SAM 候选，重新测量及融合 |
+| `--collision-model PATH` | 在线位姿规划使用的 MuJoCo 碰撞 XML |
+| `--min-views N` | 融合焊趾点所需最少支持视图数，默认 2 |
+| `--output-dir PATH` | 本次输出目录，要求不存在或为空 |
+| `--gpu N` | 在线采集和分割使用的物理 GPU 编号，默认 0 |
+| `--isaac-python PATH`、`--sam-python PATH` | 两个运行环境的 Python 路径 |
+| `--semantic-threshold VALUE` | SAM 分割阈值，默认 0.25 |
+| `--headless` | 兼容现有命令；双目采集始终不打开 GUI |
+| `--check` | 检查环境或回放文件后退出，不执行测量 |
 
-默认输出为 `outputs/runs/a04_<时间戳>/`：
-
-```text
-rgb.png             初始臂姿下 HJ-90 拍到的一帧 RGB
-camera.json         此帧分辨率下的相机内参
-capture.json        实际臂姿、机器狗位置、相机位姿和图片哈希
-capture.log         Isaac 拍照进程日志
-run_report.json     整条流程的状态和结果索引
-auto_weld.log       自动识别日志
-auto_weld/          自动识别图片、三维曲线、JSON 和 NPZ
-```
-
-保持正常初始臂姿时，相机画面可能没有足够的焊缝证据。识别结果会如实保留
-`no_candidate` 或无有效区间，不会为了获得候选而自动转动机械臂。
-
-## 安装与运行
-
-模型使用两个独立的 Python 3.12 Conda 环境。按
-[模型部署说明](thirdparty/README.md) 安装源码、依赖和权重后，在项目根目录执行：
-
-```bash
-conda activate depth-anything-3
-python scripts/auto_weld.py assets/weld_images/tacked_front_01.jpg
-
-# 目录中的图片分别独立处理
-python scripts/auto_weld.py assets/weld_images
-
-# 指定 SAM 环境、GPU 和输出目录
-python scripts/auto_weld.py assets/weld_images \
-  --sam-python /path/to/envs/sam3/bin/python \
-  --gpu 0 --output-dir outputs/welds
-```
-
-默认 SAM 环境位于当前 DA3 环境的同级 `sam3/`，可用 `--sam-python` 覆盖。
-`--gpu auto` 为每个模型选择空闲显存最多的 GPU；DA3 和 SAM3 依次运行。
-两份模型权重必须预先下载，具体路径见部署说明。
-
-## 模型缓存和参数
-
-```bash
-python scripts/auto_weld.py assets/weld_images \
-  --model-cache-dir /tmp/quadweld_auto_models
-```
-
-缓存校验输入图片 SHA256；SAM 缓存同时校验阈值与图片顺序。
-更换模型权重、源码或推理设置后应使用新缓存目录。
-
-| 参数 | 用途 |
-| --- | --- |
-| `images` | 一张或多张 RGB 图片，或图片目录 |
-| `--output-dir` | 结果目录，默认 `outputs/offline/depth_anything_3` |
-| `--gpu` | 物理 GPU 编号，或 `auto` |
-| `--sam-python` | SAM3 环境的 Python 路径 |
-| `--semantic-threshold` | SAM 初始阈值，默认 `0.25` |
-| `--joint-band-width` | 原图中交线展示带宽，默认 5 像素 |
-| `--model-cache-dir` | 保存并复用 DA3 和 SAM 推理结果 |
-| `--reuse-depth-dir` | 复用本流程生成、且图片哈希匹配的 DA3 深度缓存 |
-| `--intrinsics` | 可选的针孔相机标定 JSON；默认使用 DA3 预测内参 |
-
-`--intrinsics` 只替换内参，深度仍由 DA3 生成。JSON 格式：
-
-```json
-{
-  "image_size": [640, 480],
-  "camera_matrix": [[400, 0, 320], [0, 400, 240], [0, 0, 1]],
-  "distortion_coefficients": [0, 0, 0, 0, 0]
-}
-```
-
-图片必须与标定尺寸一致，并已去畸变。程序将内参换算到 DA3 的处理分辨率。
+默认输出到 `outputs/runs/<台北日期时间>__stereo__<工位>_front__sweep/`；回放运行使用 `__replay` 后缀，结果写入新目录。
+`--pipeline` 及单张 RGB、深度模型和激光扫描分支参数已从主入口移除。
 
 ## 输出
 
-| 文件 | 内容 |
-| --- | --- |
-| `auto_overview.jpg` | 全图接缝和焊道候选 |
-| `weld_toes_overview.jpg` | 成对焊趾、待确认点和截面证据 |
-| `seam_paths.csv` | 两种分支统一导出的三维曲线 |
-| `data/auto_report.json` | 板面、区段状态、曲线索引和连续有效区间 |
-| `data/auto_results.npz` | 深度、内参、掩码及二维/三维曲线数组 |
-| `data/weld_toes.csv` | 焊趾表面估计和逐点有效性标记 |
-| `data/sam_plate_overview.jpg`、`data/sam_weld_overview.jpg` | 几何过滤前的 SAM 分割结果 |
-| `README.md` | 本次结果索引 |
-
-三维坐标位于估计相机光学坐标系：X 向右、Y 向下、Z 向前，单位米。
-CSV 按 `image,path_id,geometry_run` 分组，排除 `geometry_run=-1`，按 `sample` 排序；
-不同有效区间不能直接连接。
-
-未接受焊道覆盖的区段保留板面交线候选；接受的已有焊道输出两侧焊趾。
-未检出焊道不代表工件未焊接。DA3 深度与三维曲线是模型估计，尚无毫米级定位精度验收。
-完整算法、阈值和结果字段见 [流程说明](docs/sam3_da3_weld_detection.md)。
-
-## 工业焊接场景
-
-### Nested 双目与相机参数深度
-
-已支持同步左右目 RGB 与内外参共同输入 `DA3NESTED-GIANT-LARGE-1.1`，
-按已知 90 mm 基线恢复尺度，输出左右目米制深度。新增同步采集、推理和独立 RTX
-真值评价脚本；提供单目、无标定双目、有标定双目的相同像素对照。
-本次 A02/A04 工件内部 MAE 为 2.93–4.32 mm，全画面仍有明显误差。
-复跑命令、输入格式和评价限制见 [Nested 双目深度说明](docs/nested_stereo_depth.md)。
-
-继续核对焊缝空间位置与可视化：
-
-```bash
-.venv/bin/python scripts/benchmark_stereo_seams.py --gpu 0
+```text
+run_report.json                 运行状态、来源和结果索引
+overview_plan.json              整体观察位姿计划（在线采集）
+overview/captures/<视图>/        整体双目 RGB 与 input.json 标定
+overview/sam/                   整体观察的 SAM 候选
+close_plan.json                 近距离扫查计划（在线采集）
+close/captures/<视图>/           近距离双目 RGB 与标定
+close/sam/                      近距离 SAM 候选
+*_capture.log、*_sam.log         在线采集和分割日志
+results/predictions.json         逐视图测量与融合状态
+results/<工位>/fused.json        成功融合的根线与两侧焊趾
+results/<工位>/*_toe.csv          两侧焊趾、有效标记和支持视图数
+results/<工位>/overview_overlay.png  整体观察图上的融合结果
 ```
 
-输出原图、深度图、自动接缝与名义真值叠加、三维误差和覆盖率。
-默认处理 A04 类角接缝；错误或不完整的 SAM 选区未形成角缝时会启用整图几何回退。
-初始姿态左右目均已恢复三条接触线候选，详见 [A04 角接缝定位](docs/a04_corner_localization.md)。
+融合曲线位于世界坐标系，单位米。有效性不足的区段不会被当作有效测量点。
+`run_report.json` 保存执行状态；双目融合状态为 `ok` 时返回 0，结果不完整时返回 2，入口捕获的运行异常返回 1。
 
-现已将 A04 **三条交线全部按焊缝**，完成 9 组真实机械臂关节姿态、18 目测试。
-使用 `.venv/bin/python scripts/benchmark_a04_arm_angles.py --gpu 0` 复跑。
-逐缝误差、覆盖率与机械臂/原图/深度可视化见 [机械臂多角度测试](docs/a04_arm_angle_test.md)。
-
-A15、A03、A21 的 T 接头已各采集一组尽量看全腹板和底板的臂载双目初始视角，
-并核对 Nested 深度与前侧焊缝位置。使用 `.venv/bin/python scripts/benchmark_station_overviews.py --gpu 0` 复跑；
-视角、误差与结果入口见 [三工位整体视角测试](docs/t_station_overviews.md)。
-同一观察位姿下的无焊枪视野复测采用50 mm仿真支架偏置，像素级验证六目焊枪占用为0，见 [无焊枪复测](docs/t_station_unobstructed.md)。
-已将目标拉近至650 mm工作距离，每工位采用左中右三个重叠机械臂视角，见 [近距离工作范围复测](docs/t_station_close_views.md)。
-最新完成每工件六张图片的一次联合推理，见 [原图、预测焊缝投影与平均误差](outputs/benchmarks/t_station_joint_20261110_01/README.md)。
-使用 `.venv-da3/bin/python scripts/benchmark_joint_station_views.py --gpu 0` 复跑。
-
-另已按左右目均完整入画并预留 8% 画幅余量，为三个工位保存新的机器狗与机械臂站位。
-相机至工件中心约 1.90–1.98 m，六目均无焊枪遮挡；
-站位、原图与可打开的 USD 见 [双目完整观察站位](outputs/benchmarks/t_station_full_frame_20261110_01/README.md)。
-此距离用于整体观察，超出 HJ-90 文档的 300–800 mm 标称测量工作距离。
-已在相同机器狗站位下采集三个机械臂角度，并完成每工件六图联合深度、前景板件分割和焊缝识别，
-见 [整体距离多视角结果](outputs/benchmarks/t_station_full_joint_20261110_01/README.md)；
-复现命令、双目对照及评价口径见 [流程说明](docs/t_station_full_multiview.md)。
-
-### 双目平面交线焊缝定位
-
-同一批整体距离与近距离采集已用不依赖深度模型尺度的方法复测：SAM3 只提供两块板的粗掩码，
-每块板的三参数视差平面由左右目图像直接对齐求出，焊缝取两平面交线，米制尺度只来自双目标定。
-整体距离（约1.95 m）9组单视图线误差平均3.5 mm，近距离（0.65 m）平均0.6 mm；
-方法、复现命令、扰动测试与限制见 [双目平面交线说明](docs/stereo_plane_seam.md)。
-已按该流程重新完成三个工位、两种距离、18组双目的拟合与融合测试，
-原图、SAM3掩码、实际拟合像素和焊缝真值叠加见 [多工位分阶段可视化报告](outputs/benchmarks/stereo_plane_stations_20261111_01/README.md)。
-
-### DA3 多样本深度评价
+## 单组双目与评价
 
 ```bash
-.venv/bin/python scripts/benchmark_da3.py --gpu 0
+# 从左目生成板件候选
+.venv-sam/bin/python -m model_runtime.sam_adapter <case>/input.json --output-dir <sam_dir>
+
+# 单组双目：根线与两侧焊趾
+.venv/bin/python -m weld_vision.stereo_io <case>/input.json \
+  --candidates <sam_dir>/<case>.npz --bead --output-dir outputs/bead_toe_demo/<case>
+
+# 保存数据的独立真值评价
+.venv/bin/python -m tests.benchmarks.measure_bead_sweep --run-dir <run_dir>
+
+# 单元测试
+.venv/bin/python -m unittest discover -s tests -t .
 ```
 
-从 A01、A02、A04、A06 各采集三个独立视角，使用同一 HJ-90 内参和
-0.8、1.2、1.8 m 目标距离。不同距离同时改变视角，不单独归因于距离。
-机械臂保持正常初始姿态，新增视角由独立评测相机获得。
-DA3 只接收 RGB；渲染器光轴深度仅用于离线评价。
-脚本排除夹具、遮挡及板面边界，输出逐帧 MAE、RMSE、相对误差及总览图，
-保存到 `outputs/benchmarks/da3_<时间戳>/`。
-如存在此前 A04 原始深度评价，也将其作为缓存基线单独列出。
-此测试不执行 SAM3 或接缝识别。
+算法、仿真验证、误差统计及限制见 [带焊道接头的焊趾线](docs/bead_toe_seam.md) 和
+[双目平面交线](docs/stereo_plane_seam.md)。
+[八区域分阶段双目实验](outputs/benchmarks/20261117_01__stereo__multi8__staged/README.md)记录初始视角、粗定位、三个近拍视角、SAM3.1 分割、板面拟合、融合和独立误差评价。
+历史 DA3、Nested、注册 RGB-D 和单图识别记录已移入 [非当前双目实验归档](outputs/archive/non_stereo_experiments_20261117/README.md)，原位置映射和逐文件校验清单保存在归档内。
+输出目录的当前索引、命名规则与旧路径映射见 [outputs 说明](outputs/README.md)；本次清理情况见 [保留与清理记录](docs/output_retention.md)。
 
-`--resume --output-dir <目录>` 可恢复已校验的采集和推理；
-`--evaluate-only --output-dir <目录>` 可在 CPU 上重新计算已有结果。
+## 场景
 
-### DA3 背景与参照物对照
+完整场景可在 Isaac Sim 中打开 `assets/scenes/industrial-welding/industrial_welding_full.usda`。
+场景同步工具继续使用独立模块入口，需要 USD Python 绑定：
 
 ```bash
-.venv/bin/python scripts/benchmark_da3_background.py --gpu 0
-```
-
-固定 A01 近景的工件、相机位姿、内参、灯光及机器人初始状态，仅改变背景：
-原始车间、移除其他工位、灰平面、棋盘格平面、增加立方体，再恢复原始背景。
-场景变更仅在内存中生效。除直接渲染结果外，脚本还生成原始工位 RGB 像素完全固定的
-背景替换对照，排除反射、阴影或渲染噪声对工件外观的影响。
-DA3 只接收 RGB，参照物尺寸和相机真值不传入模型。每张图片独立重设随机种子，
-所有条件使用同一组板面内部像素评价，不做尺度或偏移校正。
-默认每个背景重拍三次（`--repeats` 可调整），每轮末尾恢复原始背景，报告均值、
-标准差和范围；这些重拍用于检查渲染波动，不算作独立工件样本。
-
-输出至 `outputs/benchmarks/da3_background_<时间戳>/`，包含输入与误差图、
-逐项数据、相机及灯光属性记录。支持 `--resume` 和 `--evaluate-only`。
-`--wait-for-gpu` 会等待空闲显存达到 12 GB 后执行，等待状态记录在 `status.json`。
-这是单一固定视角的背景敏感性实验，不代表所有工位的精度。
-已完成三轮复测，统计与限制见 [背景对照实验记录](docs/da3_background_study.md)。
-
-保留 [`assets/scenes/industrial-welding/`](assets/scenes/industrial-welding/README.md) 完整场景包，
-包括 B2/E05L-Pro/HJ-90、28 个 A 工位、首层焊纹、相机、贴图和当前初始姿态。
-
-在已有的 Isaac Sim 中通过 File > Open 打开
-`assets/scenes/industrial-welding/industrial_welding_full.usda` 查看完整场景。
-
-[`scripts/import_industrial_welding.py`](scripts/import_industrial_welding.py) 保留用于从相邻
-RoboSimStudio 工程同步场景更新。导入需要 USD Python 绑定：
-
-```bash
-uv run --locked --extra usd python scripts/import_industrial_welding.py
+uv run --locked --extra usd python -m weld_scene.import_scene
 ```
 
 ## 代码结构
 
-```text
-main.py                   当前场景初始臂姿加载、RGB 拍照与识别总入口
-scripts/auto_weld.py       图片输入、SAM 推理、流程编排和结果导出
-scripts/predict_depth.py   DA3 模型工作进程
-scripts/benchmark_da3.py   多工位、多视角原始深度评价
-scripts/benchmark_da3_background.py  固定视角的背景对照评价
-scripts/import_industrial_welding.py  工业场景导入
-vision/weld_detector.py    板面拟合、接触交线、焊道筛选及状态分段
-vision/stereo_seam.py      标定双目的板面视差平面拟合、平面交线焊缝与多视角合并
-scripts/stereo_seam.py     单组双目图像的焊缝三维轨迹入口
-vision/weld_toes.py        成对焊趾定位
-vision/weld_surfaces.py    局部承接表面和三维连续性检查
-vision/skeleton.py         焊道掩码骨架细化
-assets/weld_images/        RGB 样本及来源
-assets/scenes/industrial-welding/  工业焊接场景包
-```
-
-基础 `pyproject.toml` 用于 CPU 后处理依赖；完整识别使用模型环境的依赖文件。
-`usd` 是场景导入脚本的可选依赖，RGB 识别流程无需安装它。
-
-
-## HJ-90 双目与中央激光扫描
-
-新增按仿真标定实现的主动扫描入口：90 mm 基线双目、中央蓝色线光投射、摆动扫描、RGB 条纹检测、双目三角测量及米制点云。保留正常初始臂姿：
-
-```bash
-.venv/bin/python main.py --sensor hj90 --headless
-```
-
-原默认单张 RGB → DA3/SAM 流程保留为 `--sensor rgb`。HJ-90 扫描不调用 DA3，RTX 深度仅可选用于评价。
-使用方式、可配置参数、A02/A04 实测、输出与模型边界见 [双目激光说明](docs/hj90_active_stereo.md)。
-该实现不是原厂光学/固件的完全等价模型，未达到或认证宣传册精度。
+| 路径 | 职责 |
+| --- | --- |
+| [`main.py`](main.py) | 解析双目运行参数、检查环境、调度采集和测量、记录运行状态 |
+| [`weld_vision/`](weld_vision) | 双目标定读入、视差平面拟合、根线与焊趾提取、多视角融合 |
+| [`weld_vision/coarse_localization/`](weld_vision/coarse_localization) | 远距离双目粗根线、板面法向与距离 |
+| [`weld_vision/multiview_localization/`](weld_vision/multiview_localization) | 近距离逐视角测量、世界坐标融合和结果导出 |
+| [`weld_scene/`](weld_scene) | 场景同步、相机标定、机械臂运动学、位姿规划和仿真采集 |
+| [`model_runtime/`](model_runtime) | SAM3.1 适配器、Isaac/SAM 独立解释器与进程管理 |
+| [`thirdparty/`](thirdparty) | SAM3 上游源码、权重、部署说明和补丁 |
+| [`tests/`](tests) | 单元测试、独立真值和双目评估工具；共享评价函数位于 `tests/benchmarks/seam_metrics.py` |
+| [`assets/`](assets) | 工业场景 USD、贴图、来源记录及历史 RGB 样本 |
+| [`calibration/`](calibration) | HJ-90 仿真双目参数与厂商 RGB 标定 |
+| [`environments/`](environments) | SAM3.1 环境定义及依赖版本 |
+| [`docs/`](docs) | 当前算法说明与双目实验记录 |
+| `outputs/` | 本地采集、缓存、预测、图像和报告，由 Git 忽略 |

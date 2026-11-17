@@ -1,6 +1,6 @@
 # HJ-90 双目与中央激光功能仿真
 
-2026-11-09：QuadWeld 新增两路独立相机、中央线激光投射、摆动扫描、RGB 条纹检测和双目三角测量。按用户确认采用仿真标定参数，配置为 `calibration/hj90_sim.json`。原 DA3/SAM 单张 RGB 工作流继续保留；本入口不调用 DA3，也不以 RTX 深度作为传感器输出。
+2026-11-09：QuadWeld 新增两路独立相机、中央线激光投射、摆动扫描、RGB 条纹检测和双目三角测量。按用户确认采用仿真标定参数，配置为 `calibration/hj90_sim.json`。本页保留独立的传感器仿真实验；当前主入口使用双目焊缝扫查，本扫描工具不以 RTX 深度作为传感器输出。
 
 2026-11-12：按新提供的厂商资料接入独立 RGB 通道，采用 `calibration/hj90_rgb_vendor.json` 的已校正 RGB 内参和左目到 RGB 的外参。该记录不提供双目左右目内参或激光标定；本页扫描链路仍使用原有仿真双目参数。原生 RGB 分辨率、坐标及使用方式见 [资料对齐说明](hj90_material_alignment.md)。
 
@@ -31,40 +31,40 @@
 
 ```bash
 # 保持当前源场景正常初始站姿，执行双目+激光扫描
-.venv/bin/python main.py --sensor hj90 --headless
+.venv/bin/python -m weld_scene.active_scan --pose original --headless
 
 # 当前默认姿态；128 线采集检查（未对准工件）
-.venv/bin/python scripts/scan_hj90.py --pose original --headless --lines 128
+.venv/bin/python -m weld_scene.active_scan --pose original --headless --lines 128
 
 # 标准 640 线扫描；只把 RTX 深度用作评价
-.venv/bin/python scripts/scan_hj90.py --pose original --headless --lines 640 --evaluate
+.venv/bin/python -m weld_scene.active_scan --pose original --headless --lines 640 --evaluate
 
 # 固定激光角，移动合成试件；验证动态采样，不是机器人动力学
-.venv/bin/python scripts/scan_hj90.py --fixture step --mode dynamic \
+.venv/bin/python -m weld_scene.active_scan --fixture step --mode dynamic \
   --target-speed -0.1 --lines 24 --headless --evaluate
 
 # 仅用保存的 RGB 和标定重新计算；不需要 Isaac、场景或评价真值
-.venv/bin/python scripts/reconstruct_hj90.py outputs/hj90/<本次目录>
+.venv/bin/python -m weld_scene.reconstruct outputs/validation/<本次目录>
 ```
 
-`--isaac-python /path/to/python` 可以显式指定渲染环境。主入口 `--sensor rgb` 是默认的原 DA3/SAM 流程；`--sensor hj90` 直接采集米制扫描结果，不执行焊缝识别。两条链路尚未融合。
+`--isaac-python /path/to/python` 可以显式指定渲染环境。该模块直接采集米制扫描结果；`main.py` 只运行双目焊缝扫查，已移除传感器分支参数。
 
-另有 [Nested 双目与相机参数推理](nested_stereo_depth.md)：关闭激光后，同步左右目 RGB 连同 K/R/t 输入 Nested，输出两目各自的稠密深度并独立核对误差。该入口尚未融合这里的激光扫描点云。
+[Nested 双目历史实验](../outputs/archive/non_stereo_experiments_20261117/docs/nested_stereo_depth.md) 保留此前稠密深度评价记录，对应运行入口已移除。
 
-完整场景 File > Open 入口仍为 `assets/scenes/industrial-welding/industrial_welding_full.usda`，现在包含更强的 `industrial_welding_hj90.usda`：
+完整场景 File > Open 入口仍为 `assets/scenes/industrial-welding/industrial_welding_full.usda`，现在包含更强的 `undated_01__scene__industrial_welding__sensor_preview.usda`：
 
 - 左目 `/World/Robot/e05l_welding_torch/hj90_active/left`
 - 右目 `/World/Robot/e05l_welding_torch/hj90_active/right`
 - 激光 `/World/Robot/e05l_welding_torch/hj90_active/laser`
 - 厂商已校正 RGB `/World/Robot/e05l_welding_torch/hj90_active/rgb`
 
-原 `/.../hj90` 留作中点 RGB 兼容相机。`main.py` 默认改用厂商 RGB 通道，拍照时在会话层关闭激光。打开 USD 可看到零角度的投射，自动摆扫由 `scan_hj90.py` 驱动；不会仅凭打开文件自动执行机器人动作。所有原始 USDC、拍摄层和机器人初始位姿保持不变。更新仿真或 RGB 标定后运行 `scripts/build_hj90_sensor.py` 重建便携传感器层；导入脚本也会重建它。
+原 `/.../hj90` 留作中点 RGB 兼容相机。厂商 RGB 通道作为标定与场景资料保留，当前 `main.py` 使用左右目 RGB。打开 USD 可看到零角度的投射，自动摆扫由 `weld_scene.active_scan` 驱动；不会仅凭打开文件自动执行机器人动作。所有原始 USDC、拍摄层和机器人初始位姿保持不变。更新仿真或 RGB 标定后运行 `weld_scene/build_sensor.py` 重建便携传感器层；导入脚本也会重建它。
 
 投影使用 [NVIDIA 的 RTX projector light 接口](https://docs.omniverse.nvidia.com/materials-and-rendering/latest/lighting.html#projector-light)。采样前重置渲染历史，避免把上一条光纹拖影当作新条纹；参考 [Isaac Sim SDG 渲染历史说明](https://docs.isaacsim.omniverse.nvidia.com/6.1.0/replicator_tutorials/tutorial_replicator_sdg_workflows.html)。
 
 ## 输出和坐标
 
-`outputs/hj90/<时间>/` 保存：
+新扫描默认写入 `outputs/validation/<台北日期时间>__active_stereo__<姿态或试件>__<模式>_scan/`，保存：
 
 - `left_off.png`、`right_off.png`：静态双目背景；`left_gray.png`、`right_gray.png` 为灰度转换。
 - `frames/*.npz`：每条扫描线的 `left_on`、`right_on` RGB；动态模式还保存逐帧 `left_off`、`right_off`。
@@ -92,4 +92,4 @@
 
 台阶 `step_scan_02` 使用早期 4 mm 激光平面筛选容差；当前容差收紧为 0.5 mm。A04/A02 使用当前 0.5 mm。每项指标只评价最终保留点在**左目观测像素**的轴向深度与 RTX 真值，包含量化/边缘和反射误匹配，不是全画面精度，也不是焊缝定位精度。128 线为稀疏测试，不等同厂家全帧。A04 当前朝向有大量目标超出 800 mm 或落在自身上，9532 点不能解释为工件有效覆盖。
 
-A04、A02 和动态测试已从保存的 RGB 离线重建，全部输出数组与在线结果完全一致，未读场景或评价深度。运行数据保留在 `outputs/hj90/`，由 Git 忽略。没有按真实厂家标定、真实工件或硬件采集进行精度认证。
+A04、A02 和动态测试已从保存的 RGB 离线重建，全部输出数组与在线结果完全一致，未读场景或评价深度。运行数据保留在 `outputs/weld_scene/`，由 Git 忽略。没有按真实厂家标定、真实工件或硬件采集进行精度认证。

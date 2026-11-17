@@ -9,11 +9,11 @@ import unittest
 import numpy as np
 from pxr import Gf, Usd, UsdGeom
 
-from hj90.arm_kinematics import ArmKinematics
-from hj90.usd import RGB_CAMERA, SOURCE_CAMERA, camera_intrinsics, set_intrinsics
-from hj90.vendor_calibration import (DEFAULT_RGB_CALIBRATION, load_rgb_calibration,
+from weld_scene.arm_kinematics import ArmKinematics
+from weld_scene.usd import RGB_CAMERA, SOURCE_CAMERA, camera_intrinsics, set_intrinsics
+from weld_scene.vendor_calibration import (DEFAULT_RGB_CALIBRATION, load_rgb_calibration,
                                      resize_rgb_calibration, rgb_pose_in_midpoint)
-from main import inspect_stage, parse_args, scene_setup
+from weld_scene.scene import inspect_stage, scene_setup
 
 
 class VendorRGBTests(unittest.TestCase):
@@ -96,8 +96,7 @@ class VendorRGBTests(unittest.TestCase):
             actual = np.linalg.inv(world(RGB_CAMERA)) @ left
             np.testing.assert_allclose(actual, transform, atol=2e-7, rtol=0)
 
-    def test_main_defaults_to_vendor_rgb_and_can_reproduce_legacy_camera(self):
-        self.assertEqual(parse_args([]).rgb_profile, 'vendor')
+    def test_scene_setup_supports_vendor_and_legacy_calibration(self):
         for resolution in (None, [780, 1024]):
             setup = scene_setup('vendor', resolution)
             self.assertEqual(setup['camera'], RGB_CAMERA)

@@ -1,7 +1,7 @@
 [project]
 name = "quadweld"
 version = "0.1.0"
-description = "Automatic 3D weld detection from RGB using DA3 and SAM3"
+description = "Calibrated stereo weld root and toe detection with SAM3"
 readme = "README.md"
 requires-python = ">=3.12,<3.13"
 dependencies = [

@@ -4,7 +4,7 @@ import unittest
 
 import numpy as np
 
-from scripts.benchmark_stereo_seams import backproject, error_stats, project, runs, sample_depth, segment_distances
+from tests.benchmarks.seam_metrics import backproject, error_stats, project, runs, sample_depth, segment_distances
 
 
 class SeamMetricTests(unittest.TestCase):

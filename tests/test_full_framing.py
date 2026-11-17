@@ -5,8 +5,8 @@ import unittest
 
 import numpy as np
 
-from hj90.full_framing import fit_stereo_distance
-from hj90.overview_planning import framing
+from weld_scene.full_framing import fit_stereo_distance
+from weld_scene.overview_planning import framing
 
 
 class FullFramingTests(unittest.TestCase):

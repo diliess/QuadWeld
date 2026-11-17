@@ -5,7 +5,7 @@ import unittest
 import cv2
 import numpy as np
 
-from vision import stereo_seam as ss
+from weld_vision import stereo_seam as ss
 
 
 SEAM_ENDS = np.array([[-.25, 0., 0.], [.25, 0., 0.]])   # web foot on the base plate, world frame

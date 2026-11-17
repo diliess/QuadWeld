@@ -6,9 +6,9 @@ import numpy as np
 from scipy.spatial.transform import Rotation
 from pxr import Gf, Usd, UsdGeom
 
-from evaluation.a04_reference import contact_segments, reference_from_stage
-from hj90.arm_kinematics import ArmKinematics
-from scripts.benchmark_stereo_seams import per_seam_metrics, project
+from tests.a04_reference import contact_segments, reference_from_stage
+from weld_scene.arm_kinematics import ArmKinematics
+from tests.benchmarks.seam_metrics import per_seam_metrics, project
 
 
 class ThreeContactTests(unittest.TestCase):

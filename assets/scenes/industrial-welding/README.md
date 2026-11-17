@@ -5,7 +5,7 @@
 | 入口 | 内容 |
 |---|---|
 | `industrial_welding_full.usda` | 完整场景、机器人和 QuadWeld 双目/激光/RGB 通道，Isaac File > Open 入口 |
-| `industrial_welding_hj90.usda` | 叠加传感器的覆盖层，引用当前源 USDC |
+| `undated_01__scene__industrial_welding__sensor_preview.usda` | 叠加传感器的覆盖层，引用当前源 USDC |
 | `industrial_welding.usda` | 停用机器人、相机、灯光与 PhysicsScene 的纯环境引用层 |
 | `industrial_welding.usdc` | 源场景底层，逐字节保留源文件 |
 
@@ -15,7 +15,7 @@
 
 默认使用源场景的正常初始站姿：基座约 `[-14,0,0.522968]` m，机械臂 `[0,1.2,2.3,0,1.3,0]` rad。相机保持随焊枪刚性安装。该初姿尚未对准工件，不能用初始相机画面评价焊缝识别效果。
 
-旧 24 工位布局的 A02/A04 四个拍摄预设已退出当前场景，完整旧包备份在本机 `outputs/imports/industrial-welding_20261112_174825_211229/`（Git 忽略）。旧覆盖层不能直接套用新底层。当前 `manifest.json` 的 `full_scene.poses` 仅列有效预设；`main.py`、双目采集和扫描入口使用其中的默认姿态。A04 机械臂多角度脚本在缺少新 A04 站位时会明确报错，需要重新规划站位后再运行。A15/A03/A21 的站位规划脚本读取当前工件几何，旧报告和旧误差仍只属于旧场景。
+旧 24 工位布局的 A02/A04 四个拍摄预设已退出当前场景，完整旧包备份在本机 `outputs/imports/20261112_174825_211229__scene__industrial_welding__backup/`（Git 忽略）。旧覆盖层不能直接套用新底层。当前 `manifest.json` 的 `full_scene.poses` 仅列有效预设；独立的传感器扫描工具使用其中的默认姿态；`main.py` 为 A25/A26 规划整体观察与近拍扫查位姿。旧 A04 机械臂多角度深度模型入口已移除。A15/A03/A21 的站位规划脚本读取当前工件几何，旧报告和旧误差仍只属于旧场景。
 
 ## 相机配置
 
@@ -31,13 +31,13 @@
 在项目根目录仅验证当前默认 RGB 采集：
 
 ```bash
-.venv/bin/python main.py --headless --capture-only --rgb-resolution 780 1024
+.venv/bin/python main.py --station A25 --headless
 ```
 
-识别流程仍是 RGB → DA3 → SAM3 → 几何推断，模型不接收场景焊缝真值或渲染器深度。工件识别测试须先选定针对当前工位的新视角。
+当前识别流程是双目 RGB → SAM3 板件候选 → 视差平面拟合 → 根线与焊趾提取 → 多视角融合。识别不接收场景焊缝真值或渲染器深度；主入口支持 A25/A26 的整体观察和近拍扫查。
 
 ```bash
-.venv/bin/python scripts/import_industrial_welding.py \
+.venv/bin/python -m weld_scene.import_scene \
   --source ../robosimstudio/examples/live/twins/industrial_welding
 ```
 
@@ -47,4 +47,4 @@
 
 ## 本次验证
 
-60 项 CPU 测试通过，包含新布局、默认姿态和导入失败时保留原包的回归检查。QuadWeld 自带 Isaac Sim 6.0.0.1 实际加载通过：24 个刚体、18 个转动关节、1685 个碰撞体；正常初姿、左右目 90 mm 基线、RGB 内参与刚性外参一致。全景、机器人、T 型及对接焊纹、左右目与 RGB 均已渲染并打开检查，激光开关产生实际投射响应。日志和截图保留在 `outputs/imports/scene_sync_20261112/`。验证保持时间轴暂停，不代表新工位的焊缝识别精度或作业可行性。
+60 项 CPU 测试通过，包含新布局、默认姿态和导入失败时保留原包的回归检查。QuadWeld 自带 Isaac Sim 6.0.0.1 实际加载通过：24 个刚体、18 个转动关节、1685 个碰撞体；正常初姿、左右目 90 mm 基线、RGB 内参与刚性外参一致。全景、机器人、T 型及对接焊纹、左右目与 RGB 均已渲染并打开检查，激光开关产生实际投射响应。日志和截图保留在 `outputs/imports/20261112_01__scene__industrial_welding__sync/`。验证保持时间轴暂停，不代表新工位的焊缝识别精度或作业可行性。

@@ -10,8 +10,8 @@ from unittest.mock import patch
 import numpy as np
 from pxr import Usd
 
-from main import scene_setup
-from scripts.import_industrial_welding import import_scene
+from weld_scene.scene import scene_setup
+from weld_scene.import_scene import import_scene
 
 BUNDLE = Path(__file__).resolve().parents[1] / 'assets/scenes/industrial-welding'
 
@@ -53,12 +53,33 @@ class SceneImportTests(unittest.TestCase):
                 (staging/'partial.usdc').write_bytes(b'partial')
                 raise ValueError('invalid new scene')
 
-            with patch('scripts.import_industrial_welding.build_bundle', side_effect=fail_after_writes):
+            with patch('weld_scene.import_scene.build_bundle', side_effect=fail_after_writes):
                 with self.assertRaisesRegex(ValueError, 'invalid new scene'):
                     import_scene(source, destination)
             self.assertEqual(user.read_text(), 'original user layer')
             self.assertFalse((destination/'partial.usdc').exists())
             self.assertFalse(list(root.glob('.welding-import-*')))
+
+    def test_reimport_keeps_previous_bundle_in_named_backup(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            source = root/'source'; source.mkdir()
+            destination = root/'industrial-welding'; destination.mkdir()
+            (destination/'saved.usda').write_text('original')
+
+            def rebuild(_source, staging):
+                (staging/'saved.usda').write_text('updated')
+                return {'files': [], 'full_scene': {'poses': {}, 'default_pose': 'original'}}
+
+            with patch('weld_scene.import_scene.ROOT', root), patch(
+                    'weld_scene.import_scene.build_bundle', side_effect=rebuild):
+                import_scene(source, destination)
+            backups = list((root/'outputs/imports').iterdir())
+            self.assertEqual(len(backups), 1)
+            self.assertRegex(backups[0].name,
+                             r'^\d{8}_\d{6}_\d{6}__scene__industrial_welding__backup$')
+            self.assertEqual((backups[0]/'saved.usda').read_text(), 'original')
+            self.assertEqual((destination/'saved.usda').read_text(), 'updated')
 
 
 if __name__ == '__main__':

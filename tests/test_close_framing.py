@@ -3,8 +3,8 @@
 import unittest
 import numpy as np
 
-from hj90.optics import load_calibration
-from hj90.overview_planning import look_at,transform_points
+from weld_scene.optics import load_calibration
+from weld_scene.overview_planning import look_at,transform_points
 
 
 class CloseFramingTests(unittest.TestCase):

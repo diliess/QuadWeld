@@ -4,7 +4,7 @@ import unittest
 import numpy as np
 from pxr import Usd
 
-from hj90.overview_planning import framing, look_at, t_geometry
+from weld_scene.overview_planning import framing, look_at, t_geometry
 
 
 class OverviewFramingTests(unittest.TestCase):
